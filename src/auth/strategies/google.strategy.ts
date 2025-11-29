@@ -12,17 +12,15 @@ interface GoogleProfile {
     givenName: string;
     familyName: string;
   };
-  emails: [{ value: string; verified: boolean }];
+  emails: { value: string; verified: boolean }[];
 }
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
-    private authService: AuthService,
-    private configService: ConfigService,
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
   ) {
-    // ⚠️ OJO: NO USAMOS this.configService ANTES DE SUPER()
-
     const clientID = configService.get<string>('GOOGLE_CLIENT_ID');
     const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
     const callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
@@ -33,7 +31,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       );
     }
 
-    // ✔ AHORA YA PODEMOS LLAMAR A super()
     super({
       clientID,
       clientSecret,
@@ -47,24 +44,23 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     refreshToken: string,
     profile: GoogleProfile,
     done: VerifyCallback,
-  ): Promise<any> {
-    const { id, name, emails } = profile;
+  ): Promise<void> {
+    const email = profile.emails?.[0]?.value;
+    const firstName = profile.name?.givenName;
+    const lastName = profile.name?.familyName;
 
-    const email = emails?.[0]?.value;
-
-    if (!email || !name.givenName) {
+    if (!email || !firstName) {
       return done(
-        new Error(
-          'Google profile missing critical information (email or name).',
-        ),
+        new Error('Google profile missing email or name.'),
+        undefined,
       );
     }
 
     const userProfile = {
-      externalId: id,
-      email: email,
-      firstName: name.givenName,
-      lastName: name.familyName,
+      externalId: profile.id,
+      email,
+      firstName,
+      lastName,
     };
 
     const user = await this.authService.validateOrCreateExternalUser(
@@ -72,6 +68,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       AuthProvider.GOOGLE,
     );
 
-    done(null, user);
+    // ✔ Passport enviará este usuario al controller
+    return done(null, user);
   }
 }

@@ -7,6 +7,12 @@ import envConfig from './config/env.config';
 import { envValidationSchema } from './config/env.validation';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { ToursModule } from './tours/tours.module';
+import { OrdersModule } from './orders/orders.module';
+import { OffersModule } from './offers/offers.module';
+import { CartModule } from './cart/cart.module';
+import { VehicleModule } from './vehicle/vehicle.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -39,6 +45,12 @@ import { AuthModule } from './auth/auth.module';
 
     UsersModule,
     AuthModule,
+    ToursModule,
+    OrdersModule,
+    OffersModule,
+    CartModule,
+    VehicleModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

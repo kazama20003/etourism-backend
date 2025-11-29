@@ -5,6 +5,7 @@ import {
   UseGuards,
   Request,
   Get,
+  Res,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService, ValidatedUser } from './auth.service';
@@ -14,6 +15,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 // Importamos el tipo de Mongoose para tipar req.user en OAuth
 import { UserDocument } from 'src/users/entities/user.entity';
+import type { Response } from 'express';
 
 // ----------------------------------------------------
 // OAuth Guards (Extienden AuthGuard con el nombre de la estrategia)
@@ -45,15 +47,20 @@ export class AuthController {
    */
   @UseGuards(LocalAuthGuard)
   @Post('login/local')
-  login(@Request() req: { user: ValidatedUser }) {
-    // AGREGAMOS LOG y CORREGIMOS el error de ESLint:
-    // Se usa .toString() para asegurar que req.user._id (que es ObjectId | string) sea un string primitivo.
-    console.log(
-      `[AUTH-CONTROLLER] Intento de login exitoso para el usuario ID: ${req.user._id.toString()}`,
-    );
+  login(
+    @Request() req: { user: ValidatedUser },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const loginResult = this.authService.login(req.user);
 
-    // req.user contiene el usuario validado (ValidatedUser) por LocalStrategy
-    return this.authService.login(req.user);
+    res.cookie('token', loginResult.access_token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
+    return loginResult;
   }
 
   /**
@@ -84,9 +91,23 @@ export class AuthController {
    */
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
-  googleAuthRedirect(@Request() req: { user: UserDocument }) {
-    // req.user es llenado por GoogleStrategy (contiene el UserDocument de Mongoose)
-    return this.authService.login(req.user);
+  googleAuthRedirect(
+    @Request() req: { user: UserDocument },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const loginResult = this.authService.login(req.user);
+
+    // Limpia cookies viejas antes de establecer la nueva
+    res.clearCookie('token');
+
+    res.cookie('token', loginResult.access_token, {
+      httpOnly: true,
+      secure: false, // en producción: true con HTTPS
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
+    return res.redirect('http://localhost:3000/login');
   }
 
   // ----------------------------------------------------
@@ -107,8 +128,24 @@ export class AuthController {
    */
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
-  facebookAuthRedirect(@Request() req: { user: UserDocument }) {
-    // req.user es llenado por FacebookStrategy
-    return this.authService.login(req.user);
+  facebookAuthRedirect(
+    @Request() req: { user: UserDocument },
+    @Res({ passthrough: true }) res: Response, // <--- agregado
+  ) {
+    const loginResult = this.authService.login(req.user);
+
+    // Limpiamos cookies antiguas si existieran
+    res.clearCookie('token');
+
+    // Guardamos JWT en HttpOnly cookie
+    res.cookie('token', loginResult.access_token, {
+      httpOnly: true,
+      secure: false, // en producción: true con HTTPS
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+    });
+
+    // Redirigimos al frontend (opcional)
+    return res.redirect('http://localhost:3000/login');
   }
 }

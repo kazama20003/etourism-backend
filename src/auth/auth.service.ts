@@ -95,15 +95,18 @@ export class AuthService {
    * Acepta UserDocument o el objeto plano ValidatedUser.
    */
   login(user: UserDocument | ValidatedUser) {
-    // Extracción segura del ID (ambos tipos contienen _id)
     const id = user._id.toString();
 
-    const payload: JwtPayload = { email: user.email, sub: id };
+    const payload: JwtPayload = {
+      email: user.email,
+      sub: id,
+      roles: user.roles, // 🔥 AHORA SÍ PASA LOS ROLES AL TOKEN
+    };
 
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: id,
+        id,
         email: user.email,
         roles: user.roles,
         firstName: user.firstName,

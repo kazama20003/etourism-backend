@@ -10,6 +10,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { FacebookStrategy } from './strategies/facebook.stategy';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     LocalStrategy,
     LocalAuthGuard,
     GoogleStrategy,
+    FacebookStrategy,
   ],
 })
 export class AuthModule {}
