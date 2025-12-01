@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -17,7 +18,8 @@ async function bootstrap() {
 
   // Prefijo global para la API
   app.setGlobalPrefix('api'); // 👈 Aquí se agrega
-
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   // Middleware para parsear cookies
   app.use(cookieParser.default());
   // Habilitar CORS

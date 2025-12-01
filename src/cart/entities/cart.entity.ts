@@ -19,20 +19,24 @@ export class Cart {
   @Prop({
     type: [
       {
-        // 👇 NO pongas _id: false, queremos que CADA ITEM tenga su propio _id
-        tourId: { type: Types.ObjectId, ref: 'Tour', required: true },
+        productId: { type: Types.ObjectId, required: true },
+        productType: {
+          type: String,
+          required: true,
+          enum: ['tour', 'transport'], // 👈 VEHICLE REMOVIDO
+        },
 
-        // Fecha para la que reserva este item
-        travelDate: { type: Date, required: true },
+        // Fecha del servicio (solo aplica a tour / transport)
+        travelDate: { type: Date },
 
-        // Personas
+        // Personas (solo tours)
         adults: { type: Number, default: 1 },
         children: { type: Number, default: 0 },
         infants: { type: Number, default: 0 },
 
-        // Precios "congelados" al momento de agregar al carrito
-        unitPrice: { type: Number, required: true }, // precio por adulto (por ejemplo)
-        totalPrice: { type: Number, required: true }, // total de este item
+        // Precios "congelados"
+        unitPrice: { type: Number, required: true },
+        totalPrice: { type: Number, required: true },
 
         appliedOfferId: { type: Types.ObjectId, ref: 'Offer' },
 
@@ -44,12 +48,13 @@ export class Cart {
     default: [],
   })
   items: {
-    _id: Types.ObjectId; // 👈 Mongoose lo genera solo
-    tourId: Types.ObjectId;
-    travelDate: Date;
-    adults: number;
-    children: number;
-    infants: number;
+    _id: Types.ObjectId;
+    productId: Types.ObjectId;
+    productType: 'tour' | 'transport'; // 👈 SIN VEHICLE
+    travelDate?: Date;
+    adults?: number;
+    children?: number;
+    infants?: number;
     unitPrice: number;
     totalPrice: number;
     appliedOfferId?: Types.ObjectId;
@@ -57,7 +62,7 @@ export class Cart {
     addedAt: Date;
   }[];
 
-  // Totales del carrito (puedes recalcular en el servicio)
+  // Totales del carrito
   @Prop({ default: 0 })
   subtotal: number;
 

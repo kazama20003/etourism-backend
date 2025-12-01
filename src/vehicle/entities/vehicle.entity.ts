@@ -22,6 +22,21 @@ export class Vehicle {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  // 👇 NUEVO: Manejo de imágenes Cloudinary
+  @Prop({
+    type: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, required: true },
+      },
+    ],
+    default: [],
+  })
+  images: {
+    url: string;
+    publicId: string;
+  }[];
 }
 
 export const VehicleSchema = SchemaFactory.createForClass(Vehicle);
