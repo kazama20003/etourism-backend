@@ -16,7 +16,8 @@ import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { SUPPORTED_LANGS, Lang } from 'src/common/constants/languages';
 import { UpdateTourTranslationDto } from './dto/update-tour-translation.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto'; // 👈 IMPORTANTE
+
 // DTO para el body del auto-translate
 class AutoTranslateDto {
   @IsArray()
@@ -38,7 +39,10 @@ export class ToursController {
   }
 
   @Get()
-  findAll(@Query() pagination: PaginationDto, @Query('lang') lang?: string) {
+  findAll(
+    @Query() pagination: PaginationDto, // 👈 ahora correctamente tipado
+    @Query('lang') lang?: string,
+  ) {
     const safeLang: Lang | undefined =
       lang && SUPPORTED_LANGS.includes(lang as Lang)
         ? (lang as Lang)
