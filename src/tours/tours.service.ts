@@ -50,9 +50,36 @@ export class ToursService {
   }
 
   // 📋 Listar tours (opcional: con lang ya mergeado)
-  async findAll(lang?: string): Promise<Tour[]> {
-    const tours = await this.tourModel.find().populate('vehicleIds').exec();
-    return tours.map((tour) => this.mergeTourWithLang(tour, lang));
+  async findAll(
+    pagination: { page?: string; limit?: string },
+    lang?: string,
+  ): Promise<{
+    data: Tour[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = pagination.page ? parseInt(pagination.page, 10) : 1;
+    const limit = pagination.limit ? parseInt(pagination.limit, 10) : 10;
+
+    const skip = (page - 1) * limit;
+
+    const [tours, total] = await Promise.all([
+      this.tourModel
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .populate('vehicleIds')
+        .exec(),
+      this.tourModel.countDocuments().exec(),
+    ]);
+
+    return {
+      data: tours.map((tour) => this.mergeTourWithLang(tour, lang)),
+      total,
+      page,
+      limit,
+    };
   }
 
   // 🔎 Obtener un tour por ID (opcional: con lang ya mergeado)

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument } from './entities/user.entity';
@@ -26,9 +26,30 @@ export class UsersService {
   /**
    * Obtiene todos los usuarios.
    */
-  async findAll(): Promise<User[]> {
-    // Excluye el passwordHash por defecto (gracias al select: false en el esquema)
-    return this.userModel.find().exec();
+  async findAll(paginationDto: PaginationDto) {
+    const page = Number(paginationDto.page) || 1;
+    const limit = Number(paginationDto.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      this.userModel.find().skip(skip).limit(limit).exec(),
+      this.userModel.countDocuments().exec(),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      message: 'Listado de usuarios obtenido correctamente',
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+      data: users,
+    };
   }
 
   /**

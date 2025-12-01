@@ -34,12 +34,24 @@ export class AuthController {
    * Endpoint para el registro de nuevos usuarios locales.
    */
   @Post('register')
-  async register(@Body() createUserDto: CreateUserDto) {
-    // FIX 1: Se añade la aserción de tipo 'as UserDocument'
+  async register(
+    @Body() createUserDto: CreateUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = (await this.usersService.create(
       createUserDto,
     )) as UserDocument;
-    return this.authService.login(user);
+
+    const loginResult = this.authService.login(user);
+
+    res.cookie('token', loginResult.access_token, {
+      httpOnly: true,
+      secure: false, // en producción: true con HTTPS
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+    });
+
+    return loginResult;
   }
 
   /**
