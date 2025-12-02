@@ -14,6 +14,7 @@ import { CartModule } from './cart/cart.module';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { TransportsModule } from './transports/transports.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { TransportsModule } from './transports/transports.module';
     VehicleModule,
     UploadsModule,
     TransportsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
