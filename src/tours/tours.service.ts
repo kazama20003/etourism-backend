@@ -351,4 +351,15 @@ export class ToursService {
     // Devolvemos el tour ya "mergeado" en ese idioma
     return this.mergeTourWithLang(saved as TourDocument, lang);
   }
+  // src/tours/tours.service.ts
+
+  async findPopularTours(lang?: string): Promise<Tour[]> {
+    const tours = await this.tourModel
+      .find({ isPopular: true, isActive: true })
+      .limit(4)
+      .populate('vehicleIds')
+      .exec();
+
+    return tours.map((tour) => this.mergeTourWithLang(tour, lang));
+  }
 }

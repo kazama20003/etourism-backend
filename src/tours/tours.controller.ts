@@ -51,6 +51,17 @@ export class ToursController {
 
     return this.toursService.findAll(pagination, safeLang, email);
   }
+  // src/tours/tours.controller.ts
+
+  @Get('popular')
+  getPopularTours(@Query('lang') lang?: string) {
+    const safeLang: Lang | undefined =
+      lang && SUPPORTED_LANGS.includes(lang as Lang)
+        ? (lang as Lang)
+        : undefined;
+
+    return this.toursService.findPopularTours(safeLang);
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Query('lang') lang?: string) {
