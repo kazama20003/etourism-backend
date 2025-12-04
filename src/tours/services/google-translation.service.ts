@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { AxiosError } from 'axios';
 import { Tour } from '../entities/tour.entity';
+import unidecode from 'unidecode';
 
 export type TourTranslationPayload = {
   title?: string;
@@ -36,6 +37,19 @@ interface GoogleErrorResponse {
     message?: string;
     status?: string;
   };
+}
+
+/**
+ * Type Guard: Verifica si el error es de Axios de forma segura.
+ * Evita el uso de 'any' casteando a Record<string, unknown>, lo cual satisface al linter.
+ */
+function isAxiosError<T = unknown>(error: unknown): error is AxiosError<T> {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'isAxiosError' in error &&
+    (error as Record<string, unknown>).isAxiosError === true
+  );
 }
 
 @Injectable()
@@ -121,7 +135,7 @@ export class GoogleTranslationService {
       };
     }
 
-    // 👀 Debug opcional (puedes quitarlo luego)
+    // 👀 Debug opcional
     console.log(
       '👉 Textos que se enviarán a Google (' + targetLang + '):',
       texts.length,
@@ -153,7 +167,6 @@ export class GoogleTranslationService {
         slug: base.slug,
         meetingPoint: base.meetingPoint,
         metaDescription: base.metaDescription,
-        // 👇 empezamos vacíos y solo llenamos con textos traducidos
         includes: [],
         excludes: [],
         categories: [],
@@ -166,7 +179,6 @@ export class GoogleTranslationService {
           : undefined,
       };
 
-      // aplicamos las traducciones en su lugar
       for (const m of map) {
         const translatedText = translations[m.index];
         if (!translatedText) continue;
@@ -178,9 +190,14 @@ export class GoogleTranslationService {
           case 'description':
             result.description = translatedText;
             break;
-          case 'slug':
-            result.slug = this.slugify(translatedText);
+          case 'slug': {
+            const baseTitle = result.title ?? base.title ?? 'tour';
+            result.slug =
+              translatedText && translatedText.trim().length > 0
+                ? this.slugify(translatedText)
+                : this.slugify(baseTitle);
             break;
+          }
           case 'meetingPoint':
             result.meetingPoint = translatedText;
             break;
@@ -218,17 +235,26 @@ export class GoogleTranslationService {
 
       return result;
     } catch (err: unknown) {
-      const axiosErr = err as AxiosError<GoogleErrorResponse>;
-
-      console.error(
-        '🛑 Google Translate error:',
-        axiosErr.response?.status,
-        JSON.stringify(
-          axiosErr.response?.data ?? { message: axiosErr.message },
-          null,
-          2,
-        ),
-      );
+      // ✅ CORRECCIÓN: Usamos el Type Guard.
+      // Dentro del if, TypeScript sabe que 'err' es AxiosError<GoogleErrorResponse>.
+      // NO asignamos 'err' a una nueva variable, lo usamos directamente.
+      if (isAxiosError<GoogleErrorResponse>(err)) {
+        console.error(
+          '🛑 Google Translate error (Axios):',
+          err.response?.status,
+          JSON.stringify(
+            err.response?.data ?? { message: err.message },
+            null,
+            2,
+          ),
+        );
+      } else if (err instanceof Error) {
+        // Error genérico de JS
+        console.error('🛑 Google Translate error (Genérico):', err.message);
+      } else {
+        // Error completamente desconocido
+        console.error('🛑 Google Translate error (Desconocido):', err);
+      }
 
       throw new InternalServerErrorException(
         'Error al traducir con Google Translate',
@@ -237,10 +263,13 @@ export class GoogleTranslationService {
   }
 
   private slugify(text: string): string {
-    return text
+    if (!text) return '';
+
+    const ascii: string = unidecode(text);
+
+    return ascii
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // quitar tildes
+      .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }

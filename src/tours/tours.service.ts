@@ -49,10 +49,10 @@ export class ToursService {
     }
   }
 
-  // 📋 Listar tours (opcional: con lang ya mergeado)
   async findAll(
     pagination: { page?: string; limit?: string },
     lang?: string,
+    email?: string,
   ): Promise<{
     data: Tour[];
     total: number;
@@ -61,17 +61,24 @@ export class ToursService {
   }> {
     const page = pagination.page ? parseInt(pagination.page, 10) : 1;
     const limit = pagination.limit ? parseInt(pagination.limit, 10) : 10;
-
     const skip = (page - 1) * limit;
+
+    // 🆕 Filtro dinámico
+    const filter: Record<string, unknown> = {};
+
+    if (email) {
+      filter.createdByEmail = email; // 👈 ajusta si tu esquema usa otro nombre
+    }
 
     const [tours, total] = await Promise.all([
       this.tourModel
-        .find()
+        .find(filter)
         .skip(skip)
         .limit(limit)
         .populate('vehicleIds')
         .exec(),
-      this.tourModel.countDocuments().exec(),
+
+      this.tourModel.countDocuments(filter).exec(),
     ]);
 
     return {

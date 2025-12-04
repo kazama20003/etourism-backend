@@ -1,38 +1,38 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Vehicle } from 'src/vehicle/entities/vehicle.entity';
+import { Lang } from 'src/common/constants/languages';
 
 export type TransportDocument = Transport & Document;
+export type TranslatedText = Partial<Record<Lang, string>>;
 
 @Schema({ timestamps: true })
 export class Transport {
+  // TÍTULO (ES)
   @Prop({ required: true })
   title: string;
 
-  // 📝 DESCRIPCIÓN PRINCIPAL
+  // 🌎 Traducciones del título
+  @Prop({ type: Object, default: {} })
+  titleTranslations?: TranslatedText;
+
+  // DESCRIPCIÓN PRINCIPAL (ES)
   @Prop()
   description?: string;
 
-  // 🌎 TRADUCCIONES
-  @Prop({
-    type: {
-      en: { type: String },
-      pt: { type: String },
-      fr: { type: String },
-    },
-    default: {},
-  })
-  descriptionTranslations?: {
-    en?: string;
-    pt?: string;
-    fr?: string;
-  };
+  // Traducciones
+  @Prop({ type: Object, default: {} })
+  descriptionTranslations?: TranslatedText;
 
-  // 🛣️ DESCRIPCIÓN DE LA RUTA EN TEXTO
+  // DESCRIPCIÓN DE LA RUTA (ES)
   @Prop()
   routeDescription?: string;
 
-  // 🗺️ RUTA DETALLADA
+  // Traducciones
+  @Prop({ type: Object, default: {} })
+  routeDescriptionTranslations?: TranslatedText;
+
+  // RUTA DETALLADA
   @Prop({
     type: [
       {
@@ -41,18 +41,12 @@ export class Transport {
         lat: { type: Number, required: true },
         lng: { type: Number, required: true },
 
-        // 🖼 Imagen por parada
         image: {
           url: { type: String },
           publicId: { type: String },
         },
 
-        // Traducciones del nombre de la parada
-        translations: {
-          en: { type: String },
-          pt: { type: String },
-          fr: { type: String },
-        },
+        translations: { type: Object, default: {} },
       },
     ],
     default: [],
@@ -62,15 +56,8 @@ export class Transport {
     name: string;
     lat: number;
     lng: number;
-    image?: {
-      url: string;
-      publicId: string;
-    };
-    translations?: {
-      en?: string;
-      pt?: string;
-      fr?: string;
-    };
+    image?: { url: string; publicId: string };
+    translations?: TranslatedText;
   }[];
 
   // ORIGEN
@@ -101,36 +88,36 @@ export class Transport {
     lng: number;
   };
 
-  // 🚐 Vehículo asignado
+  // VEHÍCULO
   @Prop({ type: Types.ObjectId, ref: Vehicle.name, required: true })
   vehicle: Types.ObjectId;
 
-  // 💸 Precios
+  // PRECIOS
   @Prop({ required: true })
   currentPrice: number;
 
   @Prop()
   oldPrice?: number;
 
-  // 🕒 Duración total del transporte
+  // DURACIÓN
   @Prop()
   durationHours?: number;
 
   @Prop()
   durationMinutes?: number;
 
-  // 🕓 Horarios
+  // HORARIOS
   @Prop()
-  departureTime?: string; // "08:30"
+  departureTime?: string;
 
   @Prop()
-  arrivalTime?: string; // "09:15"
+  arrivalTime?: string;
 
-  // Estado
+  // ESTADO
   @Prop({ default: true })
   isActive: boolean;
 
-  // Imágenes generales del transporte
+  // GALERÍA
   @Prop({
     type: [
       {

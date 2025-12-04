@@ -40,15 +40,16 @@ export class ToursController {
 
   @Get()
   findAll(
-    @Query() pagination: PaginationDto, // 👈 ahora correctamente tipado
+    @Query() pagination: PaginationDto,
     @Query('lang') lang?: string,
+    @Query('email') email?: string, // 👈 NUEVO
   ) {
     const safeLang: Lang | undefined =
       lang && SUPPORTED_LANGS.includes(lang as Lang)
         ? (lang as Lang)
         : undefined;
 
-    return this.toursService.findAll(pagination, safeLang);
+    return this.toursService.findAll(pagination, safeLang, email);
   }
 
   @Get(':id')

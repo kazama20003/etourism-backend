@@ -12,6 +12,10 @@ import {
 import { Type } from 'class-transformer';
 import { Lang } from 'src/common/constants/languages';
 
+// -------------------------
+// SUB-DTOS
+// -------------------------
+
 class CoordinatesDto {
   @IsString()
   @IsNotEmpty()
@@ -22,6 +26,16 @@ class CoordinatesDto {
 
   @IsNumber()
   lng: number;
+}
+
+class RouteImageDto {
+  @IsOptional()
+  @IsString()
+  url?: string;
+
+  @IsOptional()
+  @IsString()
+  publicId?: string;
 }
 
 class RouteStepDto {
@@ -39,7 +53,11 @@ class RouteStepDto {
   @IsNumber()
   lng: number;
 
-  // 🗣️ Traducción dinámica del nombre de la parada
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RouteImageDto)
+  image?: RouteImageDto;
+
   @IsOptional()
   @IsObject()
   translations?: Partial<Record<Lang, string>>;
@@ -55,38 +73,39 @@ class ImageDto {
   publicId: string;
 }
 
+// -------------------------
+// DTO PRINCIPAL
+// -------------------------
+
 export class CreateTransportDto {
-  // 🏷️ Título principal (en idioma por defecto)
+  // TÍTULO
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  // 🌎 TRADUCCIONES DEL TITULO
   @IsOptional()
   @IsObject()
   titleTranslations?: Partial<Record<Lang, string>>;
 
-  // Descripción general
+  // DESCRIPCIÓN
   @IsOptional()
   @IsString()
   description?: string;
 
-  // Traducciones de la descripción general
   @IsOptional()
   @IsObject()
   descriptionTranslations?: Partial<Record<Lang, string>>;
 
-  // Descripción textual de la ruta
+  // DESCRIPCIÓN DE LA RUTA
   @IsOptional()
   @IsString()
   routeDescription?: string;
 
-  // Traducciones de la descripción de la ruta
   @IsOptional()
   @IsObject()
   routeDescriptionTranslations?: Partial<Record<Lang, string>>;
 
-  // Ruta estructurada
+  // RUTA DETALLADA
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -103,11 +122,11 @@ export class CreateTransportDto {
   @Type(() => CoordinatesDto)
   destination: CoordinatesDto;
 
-  // Vehículo asignado
+  // VEHÍCULO
   @IsMongoId()
   vehicle: string;
 
-  // Precios
+  // PRECIOS
   @IsNumber()
   currentPrice: number;
 
@@ -115,12 +134,25 @@ export class CreateTransportDto {
   @IsNumber()
   oldPrice?: number;
 
-  // Duración (minutos)
+  // DURACIÓN
+  @IsOptional()
+  @IsNumber()
+  durationHours?: number;
+
   @IsOptional()
   @IsNumber()
   durationMinutes?: number;
 
-  // Imágenes generales
+  // HORARIOS
+  @IsOptional()
+  @IsString()
+  departureTime?: string;
+
+  @IsOptional()
+  @IsString()
+  arrivalTime?: string;
+
+  // IMÁGENES
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
