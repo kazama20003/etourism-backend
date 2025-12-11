@@ -9,16 +9,19 @@ import {
   Delete,
   Query,
   BadRequestException,
+  ParseIntPipe,
 } from '@nestjs/common';
+
 import { IsArray, ArrayNotEmpty, IsIn } from 'class-validator';
+
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
-import { SUPPORTED_LANGS, Lang } from 'src/common/constants/languages';
 import { UpdateTourTranslationDto } from './dto/update-tour-translation.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto'; // 👈 IMPORTANTE
 
-// DTO para el body del auto-translate
+import { SUPPORTED_LANGS, Lang } from 'src/common/constants/languages';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+
 class AutoTranslateDto {
   @IsArray()
   @ArrayNotEmpty()
@@ -34,24 +37,28 @@ export class ToursController {
   constructor(private readonly toursService: ToursService) {}
 
   @Post()
-  create(@Body() createTourDto: CreateTourDto) {
-    return this.toursService.create(createTourDto);
+  create(@Body() dto: CreateTourDto) {
+    return this.toursService.create(dto);
   }
 
   @Get()
   findAll(
-    @Query() pagination: PaginationDto,
-    @Query('lang') lang?: string,
-    @Query('email') email?: string, // 👈 NUEVO
+    @Query('page', ParseIntPipe) page?: number,
+    @Query('limit', ParseIntPipe) limit?: number,
+    @Query('lang') lang: string = 'es',
+    @Query('email') email?: string,
   ) {
-    const safeLang: Lang | undefined =
-      lang && SUPPORTED_LANGS.includes(lang as Lang)
-        ? (lang as Lang)
-        : undefined;
+    const pagination: PaginationDto = {
+      page: page ?? 1,
+      limit: limit ?? 20,
+    };
+
+    const safeLang: Lang = SUPPORTED_LANGS.includes(lang as Lang)
+      ? (lang as Lang)
+      : 'es';
 
     return this.toursService.findAll(pagination, safeLang, email);
   }
-  // src/tours/tours.controller.ts
 
   @Get('popular')
   getPopularTours(@Query('lang') lang?: string) {
@@ -74,8 +81,8 @@ export class ToursController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTourDto: UpdateTourDto) {
-    return this.toursService.update(id, updateTourDto);
+  update(@Param('id') id: string, @Body() dto: UpdateTourDto) {
+    return this.toursService.update(id, dto);
   }
 
   @Delete(':id')
@@ -83,13 +90,11 @@ export class ToursController {
     return this.toursService.remove(id);
   }
 
-  // 🌍 Auto-traducir tour
   @Post(':id/auto-translate')
   autoTranslate(@Param('id') id: string, @Body() body: AutoTranslateDto) {
     return this.toursService.autoTranslate(id, body.langs);
   }
 
-  // ✏️ Corregir traducción manualmente
   @Patch(':id/translation/:lang')
   updateTranslation(
     @Param('id') id: string,

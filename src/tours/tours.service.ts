@@ -50,7 +50,7 @@ export class ToursService {
   }
 
   async findAll(
-    pagination: { page?: string; limit?: string },
+    pagination: { page?: number; limit?: number }, // <--- AHORA NÚMEROS
     lang?: string,
     email?: string,
   ): Promise<{
@@ -59,15 +59,15 @@ export class ToursService {
     page: number;
     limit: number;
   }> {
-    const page = pagination.page ? parseInt(pagination.page, 10) : 1;
-    const limit = pagination.limit ? parseInt(pagination.limit, 10) : 10;
+    const page = pagination.page ?? 1;
+    const limit = pagination.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    // 🆕 Filtro dinámico
+    // Filtro dinámico
     const filter: Record<string, unknown> = {};
 
     if (email) {
-      filter.createdByEmail = email; // 👈 ajusta si tu esquema usa otro nombre
+      filter.createdByEmail = email; // ajusta si tu esquema usa otro campo
     }
 
     const [tours, total] = await Promise.all([
