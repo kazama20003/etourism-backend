@@ -29,11 +29,10 @@ export class TransportsController {
   // FIND ALL (pagination + lang)
   @Get()
   findAll(
-    @Query('page', ParseIntPipe) page?: number,
-    @Query('limit', ParseIntPipe) limit?: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('lang') lang?: Lang,
   ) {
-    // pagination validated as numbers
     const pagination: PaginationDto = {
       page: page ?? 1,
       limit: limit ?? 20,

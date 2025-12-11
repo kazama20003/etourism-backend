@@ -89,6 +89,24 @@ export class ToursService {
     };
   }
 
+  // 🌍 Obtener tour por SLUG (con traducción opcional)
+  async findBySlug(slug: string, lang?: string): Promise<Tour> {
+    if (!slug) {
+      throw new BadRequestException('Slug inválido');
+    }
+
+    const tour = await this.tourModel
+      .findOne({ slug })
+      .populate('vehicleIds')
+      .exec();
+
+    if (!tour) {
+      throw new NotFoundException(`Tour con slug "${slug}" no encontrado`);
+    }
+
+    return this.mergeTourWithLang(tour, lang);
+  }
+
   // 🔎 Obtener un tour por ID (opcional: con lang ya mergeado)
   async findOne(id: string, lang?: string): Promise<Tour> {
     if (!isValidObjectId(id)) {

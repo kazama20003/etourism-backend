@@ -43,8 +43,8 @@ export class ToursController {
 
   @Get()
   findAll(
-    @Query('page', ParseIntPipe) page?: number,
-    @Query('limit', ParseIntPipe) limit?: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('lang') lang: string = 'es',
     @Query('email') email?: string,
   ) {
@@ -58,6 +58,16 @@ export class ToursController {
       : 'es';
 
     return this.toursService.findAll(pagination, safeLang, email);
+  }
+  // ⚠️ Importante: colocar este endpoint ANTES del @Get(':id')
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string, @Query('lang') lang?: string) {
+    const safeLang: Lang | undefined =
+      lang && SUPPORTED_LANGS.includes(lang as Lang)
+        ? (lang as Lang)
+        : undefined;
+
+    return this.toursService.findBySlug(slug, safeLang);
   }
 
   @Get('popular')
