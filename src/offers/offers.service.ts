@@ -119,18 +119,21 @@ export class OffersService {
   // 🔥 Buscar oferta por código
   async findByCode(code: string) {
     const cleanCode = code.trim().toUpperCase();
-
     const now = new Date();
 
+    // Buscar la oferta por código limpio, estado activo, y validación de fechas
     const offer = await this.offerModel.findOne({
       code: cleanCode,
-      isActive: true,
+      isActive: true, // Verificar si la oferta está activa
       $or: [
+        // Caso 1: La oferta está activa dentro de un rango de fechas
         { startDate: { $lte: now }, endDate: { $gte: now } },
+        // Caso 2: Si no tiene fechas de inicio y fin, entonces no hay restricción de fechas
         { startDate: null, endDate: null },
       ],
     });
 
+    // Si no se encuentra la oferta o no es válida
     if (!offer) {
       throw new NotFoundException(`Offer code "${code}" is invalid or expired`);
     }

@@ -1,42 +1,22 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+// src/payments/payments.controller.ts
+import { Controller, Post, Body } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import type { IzipayIpnPayload } from './types/izipay-ipn.type';
 
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentsService.create(createPaymentDto);
+  // 🔐 IPN IZIPAY
+  @Post('ipn')
+  async ipn(@Body() body: IzipayIpnPayload) {
+    return this.paymentsService.handleIpn(body);
   }
 
-  @Get()
-  findAll() {
-    return this.paymentsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentsService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentsService.remove(+id);
+  // 💳 Crear FormToken
+  @Post('form-token')
+  createFormToken(@Body() dto: CreatePaymentDto) {
+    return this.paymentsService.createFormToken(dto);
   }
 }
