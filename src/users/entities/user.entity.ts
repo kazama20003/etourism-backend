@@ -34,7 +34,7 @@ export class User {
   @Prop({ required: true })
   firstName: string;
 
-  @Prop({ required: true })
+  @Prop()
   lastName: string;
 
   // --- Roles y Estado ---

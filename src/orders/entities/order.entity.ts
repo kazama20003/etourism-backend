@@ -41,7 +41,7 @@ export class Order {
         productType: {
           type: String,
           required: true,
-          enum: ['tour', 'transport'],
+          enum: ['Tour', 'Transport'],
         },
 
         travelDate: { type: Date },
@@ -62,7 +62,7 @@ export class Order {
   })
   items: {
     productId: Types.ObjectId;
-    productType: 'tour' | 'transport';
+    productType: 'Tour' | 'Transport';
     travelDate?: Date;
     adults?: number;
     children?: number;

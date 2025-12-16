@@ -18,14 +18,11 @@ export class OrdersService {
     private readonly orderModel: Model<OrderDocument>,
   ) {}
 
-  // 🆕 CREATE ORDER
-  async create(createOrderDto: CreateOrderDto) {
-    // Validar items del array
+  async create(createOrderDto: CreateOrderDto, userId?: string) {
     if (!createOrderDto.items || createOrderDto.items.length === 0) {
       throw new BadRequestException('Order must include at least one item');
     }
 
-    // Validar que cada productId sea un ObjectId válido
     for (const item of createOrderDto.items) {
       if (!Types.ObjectId.isValid(item.productId)) {
         throw new BadRequestException(
@@ -34,7 +31,6 @@ export class OrdersService {
       }
     }
 
-    // Generar un código único de confirmación
     const confirmationCode = Math.random()
       .toString(36)
       .substring(2, 10)
@@ -43,6 +39,7 @@ export class OrdersService {
     const order = await this.orderModel.create({
       ...createOrderDto,
       confirmationCode,
+      ...(userId && { userId: new Types.ObjectId(userId) }),
     });
 
     return order;
@@ -122,6 +119,39 @@ export class OrdersService {
     return {
       message: 'Order deleted successfully',
       orderId: id,
+    };
+  }
+  // 📄 GET ORDERS BY AUTHENTICATED USER
+  async findByUser(userId: string, paginationDto: PaginationDto) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const userObjectId = new Types.ObjectId(userId);
+
+    const { page = '1', limit = '10' } = paginationDto;
+
+    const pageNumber = Math.max(Number(page), 1);
+    const limitNumber = Math.max(Number(limit), 1);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const [orders, total] = await Promise.all([
+      this.orderModel
+        .find({ userId: userObjectId })
+        .skip(skip)
+        .limit(limitNumber)
+        .populate('userId')
+        .populate('items.appliedOfferId')
+        .exec(),
+
+      this.orderModel.countDocuments({ userId: userObjectId }),
+    ]);
+
+    return {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      data: orders,
     };
   }
 }

@@ -169,4 +169,57 @@ export class CartService {
     cart.discountTotal = 0;
     cart.grandTotal = cart.subtotal;
   }
+  // ============================
+  // ✅ Vaciar carrito (para IPN)
+  // ============================
+
+  async clearOpenCartByUserId(userId: string): Promise<{ cleared: boolean }> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid userId');
+    }
+
+    const cart = await this.cartModel.findOne({
+      status: 'open',
+      userId: new Types.ObjectId(userId),
+    });
+
+    if (!cart) return { cleared: false };
+
+    cart.items = [];
+    cart.subtotal = 0;
+    cart.discountTotal = 0;
+    cart.grandTotal = 0;
+
+    // opcional: marca el carrito como convertido para no reutilizarlo
+    cart.status = 'converted';
+
+    await cart.save();
+    return { cleared: true };
+  }
+
+  async clearOpenCartBySessionId(
+    sessionId: string,
+  ): Promise<{ cleared: boolean }> {
+    if (!sessionId) {
+      throw new BadRequestException('sessionId is required');
+    }
+
+    const cart = await this.cartModel.findOne({
+      status: 'open',
+      sessionId,
+    });
+
+    if (!cart) return { cleared: false };
+
+    cart.items = [];
+    cart.subtotal = 0;
+    cart.discountTotal = 0;
+    cart.grandTotal = 0;
+
+    // opcional: marca el carrito como convertido para no reutilizarlo
+    cart.status = 'converted';
+
+    await cart.save();
+    return { cleared: true };
+  }
 }

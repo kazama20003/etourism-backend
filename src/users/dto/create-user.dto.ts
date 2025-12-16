@@ -27,7 +27,6 @@ export class CreateUserDto {
   firstName: string;
 
   @IsString({ message: 'El apellido debe ser un texto.' })
-  @IsNotEmpty({ message: 'El apellido es obligatorio.' })
   lastName: string;
 
   // --- Proveedor de Autenticación (Define la lógica de validación) ---

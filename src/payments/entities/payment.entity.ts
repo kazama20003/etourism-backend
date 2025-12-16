@@ -1,12 +1,11 @@
+// src/payments/entities/payment.entity.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types, Document } from 'mongoose';
+import { Types, Document, Schema as MongooseSchema } from 'mongoose';
 import { PaymentStatus } from 'src/orders/entities/order.entity';
+import type { PaymentOrderDraft } from '../types/payment-order-draft.type';
 
 @Schema({ timestamps: true })
 export class Payment {
-  @Prop({ type: Types.ObjectId, ref: 'Order', required: true })
-  orderId: Types.ObjectId;
-
   @Prop({ required: true })
   amount: number;
 
@@ -20,12 +19,28 @@ export class Payment {
   })
   status: PaymentStatus;
 
+  // snapshot
+  @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+  orderDraft: PaymentOrderDraft;
+
+  @Prop({ type: Types.ObjectId, ref: 'Order', required: false })
+  orderId?: Types.ObjectId;
+
   @Prop()
   transactionUuid?: string;
 
-  @Prop({ type: Object })
+  @Prop({ type: MongooseSchema.Types.Mixed })
   rawResponse?: Record<string, any>;
+  @Prop({ index: true })
+  izipayOrderId: string;
+
+  @Prop()
+  formToken: string;
 }
 
 export type PaymentDocument = Payment & Document;
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+
+// Índices útiles
+PaymentSchema.index({ status: 1, createdAt: -1 });
+PaymentSchema.index({ orderId: 1 });

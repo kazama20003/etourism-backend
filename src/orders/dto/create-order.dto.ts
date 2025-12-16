@@ -20,8 +20,8 @@ class OrderItemDto {
   productId: string;
 
   @IsString()
-  @IsEnum(['tour', 'transport'])
-  productType: 'tour' | 'transport';
+  @IsEnum(['Tour', 'Transport'])
+  productType: 'Tour' | 'Transport';
 
   @IsOptional()
   @IsDateString()

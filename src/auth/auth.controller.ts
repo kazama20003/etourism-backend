@@ -6,6 +6,8 @@ import {
   Request,
   Get,
   Res,
+  Patch,
+  Param,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService, ValidatedUser } from './auth.service';
@@ -13,26 +15,38 @@ import { UsersService } from 'src/users/users.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-// Importamos el tipo de Mongoose para tipar req.user en OAuth
 import { UserDocument } from 'src/users/entities/user.entity';
 import type { Response } from 'express';
+import { SameUserGuard } from './guards/same-user.guard';
+import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 
 // ----------------------------------------------------
-// OAuth Guards (Extienden AuthGuard con el nombre de la estrategia)
+// OAuth Guards
 // ----------------------------------------------------
 class GoogleAuthGuard extends AuthGuard('google') {}
 class FacebookAuthGuard extends AuthGuard('facebook') {}
 
+// ----------------------------------------------------
+// Cookie options (ÚNICA FUENTE DE VERDAD)
+// ----------------------------------------------------
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: false, // 🔴 true en producción con HTTPS
+  sameSite: 'lax' as const,
+  path: '/', // 🔴 CLAVE PARA LOGOUT
+  maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+};
+
 @Controller('auth')
 export class AuthController {
   constructor(
-    private authService: AuthService,
-    private usersService: UsersService,
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
   ) {}
 
-  /**
-   * Endpoint para el registro de nuevos usuarios locales.
-   */
+  // ----------------------------------------------------
+  // REGISTER
+  // ----------------------------------------------------
   @Post('register')
   async register(
     @Body() createUserDto: CreateUserDto,
@@ -44,19 +58,14 @@ export class AuthController {
 
     const loginResult = this.authService.login(user);
 
-    res.cookie('token', loginResult.access_token, {
-      httpOnly: true,
-      secure: false, // en producción: true con HTTPS
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
-    });
+    res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
     return loginResult;
   }
 
-  /**
-   * Endpoint para el login local (email/password).
-   */
+  // ----------------------------------------------------
+  // LOGIN LOCAL
+  // ----------------------------------------------------
   @UseGuards(LocalAuthGuard)
   @Post('login/local')
   login(
@@ -65,42 +74,43 @@ export class AuthController {
   ) {
     const loginResult = this.authService.login(req.user);
 
-    res.cookie('token', loginResult.access_token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    });
+    res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
     return loginResult;
   }
 
-  /**
-   * Endpoint de prueba para una ruta protegida (requiere JWT válido).
-   */
+  // ----------------------------------------------------
+  // LOGOUT (FUNCIONA 100%)
+  // ----------------------------------------------------
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/', // 🔴 MISMO PATH
+    });
+
+    return { message: 'Sesión cerrada correctamente' };
+  }
+
+  // ----------------------------------------------------
+  // PROFILE
+  // ----------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req: { user: ValidatedUser }) {
-    // req.user contiene el perfil completo gracias a JwtStrategy (ValidatedUser)
     return req.user;
   }
 
   // ----------------------------------------------------
-  // Endpoints OAuth (Google)
+  // GOOGLE OAUTH
   // ----------------------------------------------------
-
-  /**
-   * 1. Inicia el flujo de autenticación de Google.
-   */
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  googleAuth() {
-    // Passport inicia el flujo de redirección.
-  }
+  googleAuth() {}
 
-  /**
-   * 2. Callback de Google después de la autenticación exitosa.
-   */
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
   googleAuthRedirect(
@@ -109,55 +119,39 @@ export class AuthController {
   ) {
     const loginResult = this.authService.login(req.user);
 
-    // Limpia cookies viejas antes de establecer la nueva
-    res.clearCookie('token');
-
-    res.cookie('token', loginResult.access_token, {
-      httpOnly: true,
-      secure: false, // en producción: true con HTTPS
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    });
+    res.clearCookie('token', { path: '/' });
+    res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
     return res.redirect('http://localhost:3000/login');
   }
 
   // ----------------------------------------------------
-  // Endpoints OAuth (Facebook)
+  // FACEBOOK OAUTH
   // ----------------------------------------------------
-
-  /**
-   * 1. Inicia el flujo de autenticación de Facebook.
-   */
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
-  facebookAuth() {
-    // Passport inicia el flujo.
-  }
+  facebookAuth() {}
 
-  /**
-   * 2. Callback de Facebook después de la autenticación exitosa.
-   */
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
   facebookAuthRedirect(
     @Request() req: { user: UserDocument },
-    @Res({ passthrough: true }) res: Response, // <--- agregado
+    @Res({ passthrough: true }) res: Response,
   ) {
     const loginResult = this.authService.login(req.user);
 
-    // Limpiamos cookies antiguas si existieran
-    res.clearCookie('token');
+    res.clearCookie('token', { path: '/' });
+    res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
-    // Guardamos JWT en HttpOnly cookie
-    res.cookie('token', loginResult.access_token, {
-      httpOnly: true,
-      secure: false, // en producción: true con HTTPS
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
-    });
-
-    // Redirigimos al frontend (opcional)
     return res.redirect('http://localhost:3000/login');
+  }
+
+  // ----------------------------------------------------
+  // UPDATE USER (SOLO MISMO USUARIO)
+  // ----------------------------------------------------
+  @UseGuards(JwtAuthGuard, SameUserGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.usersService.update(id, dto);
   }
 }

@@ -6,6 +6,7 @@ import { Payment, PaymentSchema } from './entities/payment.entity';
 import { OrdersModule } from 'src/orders/orders.module';
 import { HttpModule } from '@nestjs/axios';
 import { MailModule } from 'src/mail/mail.module';
+import { CartModule } from 'src/cart/cart.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MailModule } from 'src/mail/mail.module';
     OrdersModule,
     HttpModule,
     MailModule,
+    CartModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],
