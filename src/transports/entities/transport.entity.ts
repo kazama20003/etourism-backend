@@ -6,6 +6,15 @@ import { Lang } from 'src/common/constants/languages';
 export type TransportDocument = Transport & Document;
 export type TranslatedText = Partial<Record<Lang, string>>;
 
+export type WeekDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
 @Schema({ timestamps: true })
 export class Transport {
   // TÍTULO (ES)
@@ -40,12 +49,10 @@ export class Transport {
         name: { type: String, required: true },
         lat: { type: Number, required: true },
         lng: { type: Number, required: true },
-
         image: {
           url: { type: String },
           publicId: { type: String },
         },
-
         translations: { type: Object, default: {} },
       },
     ],
@@ -108,10 +115,26 @@ export class Transport {
 
   // HORARIOS
   @Prop()
-  departureTime?: string;
+  departureTime?: string; // "06:00"
 
   @Prop()
-  arrivalTime?: string;
+  arrivalTime?: string; // "14:30"
+
+  // 🗓️ DÍAS EN QUE OPERA EL TRANSPORTE
+  @Prop({
+    type: [String],
+    enum: [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ],
+    default: [],
+  })
+  availableDays: WeekDay[];
 
   // ESTADO
   @Prop({ default: true })

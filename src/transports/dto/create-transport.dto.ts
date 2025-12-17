@@ -8,6 +8,7 @@ import {
   ValidateNested,
   Min,
   IsObject,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Lang } from 'src/common/constants/languages';
@@ -72,6 +73,19 @@ class ImageDto {
   @IsNotEmpty()
   publicId: string;
 }
+
+// -------------------------
+// TIPOS AUXILIARES
+// -------------------------
+
+export type WeekDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 
 // -------------------------
 // DTO PRINCIPAL
@@ -146,11 +160,28 @@ export class CreateTransportDto {
   // HORARIOS
   @IsOptional()
   @IsString()
-  departureTime?: string;
+  departureTime?: string; // "06:00"
 
   @IsOptional()
   @IsString()
-  arrivalTime?: string;
+  arrivalTime?: string; // "14:30"
+
+  // 🗓️ DÍAS DISPONIBLES
+  @IsOptional()
+  @IsArray()
+  @IsIn(
+    [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ],
+    { each: true },
+  )
+  availableDays?: WeekDay[];
 
   // IMÁGENES
   @IsOptional()
