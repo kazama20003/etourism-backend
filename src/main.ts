@@ -42,8 +42,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000', // desarrollo local
-      'https://www.tourism-frontend-beta.vercel.app/es', // frontend en producción
-      'https://tourism-frontend-beta.vercel.app', // opcional si usas www
+      'https://tourism-frontend-beta.vercel.app', // frontend en producción
+      'https://www.tourism-frontend-beta.vercel.app', // opcional si usas www
     ],
     credentials: true,
   });
