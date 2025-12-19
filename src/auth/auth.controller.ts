@@ -18,7 +18,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserDocument } from 'src/users/entities/user.entity';
 import type { Response } from 'express';
 import { SameUserGuard } from './guards/same-user.guard';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto } from '../users/dto/update-user.dto';
 
 // ----------------------------------------------------
 // OAuth Guards
