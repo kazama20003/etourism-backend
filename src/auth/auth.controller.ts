@@ -16,26 +16,25 @@ import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserDocument } from 'src/users/entities/user.entity';
-import type { Response } from 'express';
+import type { Response, CookieOptions } from 'express'; // ← IMPORT CORRECTO
 import { SameUserGuard } from './guards/same-user.guard';
 import { UpdateUserDto } from '../users/dto/update-user.dto';
 
 // ----------------------------------------------------
-// OAuth Guards
+// COOKIE OPTIONS CORRECTAMENTE TIPADAS
 // ----------------------------------------------------
-class GoogleAuthGuard extends AuthGuard('google') {}
-class FacebookAuthGuard extends AuthGuard('facebook') {}
-
-// ----------------------------------------------------
-// COOKIE OPTIONS PARA PRODUCCIÓN (HTTPS + CROSS-SITE)
-// ----------------------------------------------------
-const COOKIE_OPTIONS = {
+const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
-  secure: true, // HTTPS requerido
-  sameSite: 'none' as const, // cookies cross-site (Vercel + API)
+  secure: true,
+  sameSite: 'lax',
   path: '/',
+  domain: '.tawantinsuyoperu.com',
   maxAge: 1000 * 60 * 60 * 24 * 7,
 };
+
+// OAuth Guards
+class GoogleAuthGuard extends AuthGuard('google') {}
+class FacebookAuthGuard extends AuthGuard('facebook') {}
 
 @Controller('auth')
 export class AuthController {
@@ -44,9 +43,7 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
-  // ----------------------------------------------------
   // REGISTER
-  // ----------------------------------------------------
   @Post('register')
   async register(
     @Body() createUserDto: CreateUserDto,
@@ -63,9 +60,7 @@ export class AuthController {
     return loginResult;
   }
 
-  // ----------------------------------------------------
   // LOGIN LOCAL
-  // ----------------------------------------------------
   @UseGuards(LocalAuthGuard)
   @Post('login/local')
   login(
@@ -79,34 +74,23 @@ export class AuthController {
     return loginResult;
   }
 
-  // ----------------------------------------------------
   // LOGOUT
-  // ----------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    res.clearCookie('token', COOKIE_OPTIONS);
 
     return { message: 'Sesión cerrada correctamente' };
   }
 
-  // ----------------------------------------------------
   // PROFILE
-  // ----------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req: { user: ValidatedUser }) {
     return req.user;
   }
 
-  // ----------------------------------------------------
   // GOOGLE LOGIN
-  // ----------------------------------------------------
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleAuth() {}
@@ -119,15 +103,13 @@ export class AuthController {
   ) {
     const loginResult = this.authService.login(req.user);
 
-    res.clearCookie('token', { path: '/' });
+    res.clearCookie('token', COOKIE_OPTIONS);
     res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
     return res.redirect('https://tawantinsuyoperu.com/login');
   }
 
-  // ----------------------------------------------------
   // FACEBOOK LOGIN
-  // ----------------------------------------------------
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
   facebookAuth() {}
@@ -140,15 +122,13 @@ export class AuthController {
   ) {
     const loginResult = this.authService.login(req.user);
 
-    res.clearCookie('token', { path: '/' });
+    res.clearCookie('token', COOKIE_OPTIONS);
     res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
     return res.redirect('https://tawantinsuyoperu.com/login');
   }
 
-  // ----------------------------------------------------
-  // UPDATE USER (solo mismo usuario)
-  // ----------------------------------------------------
+  // UPDATE USER
   @UseGuards(JwtAuthGuard, SameUserGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
