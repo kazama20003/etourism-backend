@@ -38,8 +38,13 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // CORS
+  // main.ts
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: [
+      'http://localhost:3000', // desarrollo local
+      'https://www.tawantinsuyoperu.com', // frontend en producción
+      'https://api.tawantinsuyoperu.com', // opcional si usas www
+    ],
     credentials: true,
   });
 
