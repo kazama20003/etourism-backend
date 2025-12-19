@@ -18,7 +18,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserDocument } from 'src/users/entities/user.entity';
 import type { Response } from 'express';
 import { SameUserGuard } from './guards/same-user.guard';
-import { UpdateUserDto } from 'src/users/dto/update-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 // ----------------------------------------------------
 // OAuth Guards
@@ -27,14 +27,14 @@ class GoogleAuthGuard extends AuthGuard('google') {}
 class FacebookAuthGuard extends AuthGuard('facebook') {}
 
 // ----------------------------------------------------
-// Cookie options (ÚNICA FUENTE DE VERDAD)
+// COOKIE OPTIONS PARA PRODUCCIÓN (HTTPS + CROSS-SITE)
 // ----------------------------------------------------
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: false, // 🔴 true en producción con HTTPS
-  sameSite: 'lax' as const,
-  path: '/', // 🔴 CLAVE PARA LOGOUT
-  maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+  secure: true, // HTTPS requerido
+  sameSite: 'none' as const, // cookies cross-site (Vercel + API)
+  path: '/',
+  maxAge: 1000 * 60 * 60 * 24 * 7,
 };
 
 @Controller('auth')
@@ -80,16 +80,16 @@ export class AuthController {
   }
 
   // ----------------------------------------------------
-  // LOGOUT (FUNCIONA 100%)
+  // LOGOUT
   // ----------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      path: '/', // 🔴 MISMO PATH
+      secure: true,
+      sameSite: 'none',
+      path: '/',
     });
 
     return { message: 'Sesión cerrada correctamente' };
@@ -105,7 +105,7 @@ export class AuthController {
   }
 
   // ----------------------------------------------------
-  // GOOGLE OAUTH
+  // GOOGLE LOGIN
   // ----------------------------------------------------
   @Get('google')
   @UseGuards(GoogleAuthGuard)
@@ -126,7 +126,7 @@ export class AuthController {
   }
 
   // ----------------------------------------------------
-  // FACEBOOK OAUTH
+  // FACEBOOK LOGIN
   // ----------------------------------------------------
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
@@ -147,7 +147,7 @@ export class AuthController {
   }
 
   // ----------------------------------------------------
-  // UPDATE USER (SOLO MISMO USUARIO)
+  // UPDATE USER (solo mismo usuario)
   // ----------------------------------------------------
   @UseGuards(JwtAuthGuard, SameUserGuard)
   @Patch(':id')
