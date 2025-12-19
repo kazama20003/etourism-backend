@@ -122,7 +122,7 @@ export class AuthController {
     res.clearCookie('token', { path: '/' });
     res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
-    return res.redirect('http://localhost:3000/login');
+    return res.redirect('https://tourism-frontend-beta.vercel.app/es/login');
   }
 
   // ----------------------------------------------------
@@ -143,7 +143,7 @@ export class AuthController {
     res.clearCookie('token', { path: '/' });
     res.cookie('token', loginResult.access_token, COOKIE_OPTIONS);
 
-    return res.redirect('http://localhost:3000/login');
+    return res.redirect('https://tourism-frontend-beta.vercel.app/es/login');
   }
 
   // ----------------------------------------------------
