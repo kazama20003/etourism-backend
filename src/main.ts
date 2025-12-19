@@ -42,8 +42,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000', // desarrollo local
-      'https://www.tawantinsuyoperu.com', // frontend en producción
-      'https://api.tawantinsuyoperu.com', // opcional si usas www
+      'https://www.tourism-frontend-beta.vercel.app/es', // frontend en producción
+      'https://tourism-frontend-beta.vercel.app', // opcional si usas www
     ],
     credentials: true,
   });
