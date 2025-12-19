@@ -15,34 +15,37 @@ import { VehicleModule } from './vehicle/vehicle.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { TransportsModule } from './transports/transports.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    // 1. Configuración global de variables de entorno
     ConfigModule.forRoot({
       isGlobal: true,
       load: [envConfig],
       validationSchema: envValidationSchema,
     }),
 
-    // 2. Configuración de Mongoose (asíncrona)
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-
       useFactory: (configService: ConfigService) => {
         const uri = configService.get<string>('app.mongodbUri');
-
         if (!uri) {
           throw new Error('La configuración app.mongodbUri no está definida.');
         }
-
-        return {
-          uri,
-          // opcional (si tienes dbName separado en tu env)
-          // dbName: configService.get<string>('app.dbName'),
-        };
+        return { uri };
       },
+    }),
+
+    // ⭐ RATE LIMIT (NestJS 10)
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000, // 60 segundos en milisegundos
+          limit: 20, // cantidad máxima por IP
+        },
+      ],
     }),
 
     UsersModule,
@@ -56,7 +59,15 @@ import { PaymentsModule } from './payments/payments.module';
     TransportsModule,
     PaymentsModule,
   ],
+
   controllers: [AppController],
-  providers: [AppService],
+
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

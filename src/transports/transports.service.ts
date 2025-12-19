@@ -8,6 +8,7 @@ import { UpdateTransportDto } from './dto/update-transport.dto';
 
 import type { Lang } from 'src/common/constants/languages';
 import type { TransportPlain, RouteItemPlain } from './types/transports.types';
+import { createSlug } from 'src/common/utils/slug.util';
 
 @Injectable()
 export class TransportsService {
@@ -32,9 +33,7 @@ export class TransportsService {
   ): RouteItemPlain {
     return {
       ...item,
-      // ocultamos las traducciones en la respuesta
       translations: undefined,
-      // y resolvemos el name según el idioma
       name:
         this.applyTranslation(item.name, item.translations, lang) ?? item.name,
     };
@@ -45,13 +44,10 @@ export class TransportsService {
 
     return {
       ...obj,
-
-      // ocultamos los mapas de traducciones en la respuesta
       titleTranslations: undefined,
       descriptionTranslations: undefined,
       routeDescriptionTranslations: undefined,
 
-      // y enviamos solo el campo resuelto
       title:
         this.applyTranslation(obj.title, obj.titleTranslations, lang) ??
         obj.title,
@@ -72,8 +68,16 @@ export class TransportsService {
     };
   }
 
-  async create(createTransportDto: CreateTransportDto) {
-    return this.transportModel.create(createTransportDto);
+  // ------------------------------------------
+  // CREATE (con generación automática del slug)
+  // ------------------------------------------
+  async create(dto: CreateTransportDto) {
+    const slug = createSlug(dto.title);
+
+    return this.transportModel.create({
+      ...dto,
+      slug,
+    });
   }
 
   async findAll(
@@ -91,10 +95,8 @@ export class TransportsService {
 
     const skip = (page - 1) * limit;
 
-    // Total de documentos
     const total = await this.transportModel.countDocuments();
 
-    // Query con paginación
     const transports = await this.transportModel
       .find()
       .populate('vehicle')
@@ -124,9 +126,18 @@ export class TransportsService {
     return this.mapTransport(transport, lang);
   }
 
+  // ----------------------------------------------------
+  // UPDATE (si cambia el título, regeneramos el slug)
+  // ----------------------------------------------------
   async update(id: string, dto: UpdateTransportDto) {
+    let slugUpdate = {};
+
+    if (dto.title) {
+      slugUpdate = { slug: createSlug(dto.title) };
+    }
+
     const updated = await this.transportModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, { ...dto, ...slugUpdate }, { new: true })
       .populate('vehicle')
       .exec();
 
@@ -145,5 +156,21 @@ export class TransportsService {
     }
 
     return { message: 'Transport deleted successfully', id };
+  }
+
+  // ------------------------------------------
+  // FIND BY SLUG (incluye traducciones)
+  // ------------------------------------------
+  async findBySlug(slug: string, lang?: Lang): Promise<TransportPlain> {
+    const transport = await this.transportModel
+      .findOne({ slug })
+      .populate('vehicle')
+      .exec();
+
+    if (!transport) {
+      throw new NotFoundException(`Transport with slug "${slug}" not found`);
+    }
+
+    return this.mapTransport(transport, lang);
   }
 }

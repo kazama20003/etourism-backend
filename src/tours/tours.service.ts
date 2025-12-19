@@ -95,6 +95,7 @@ export class ToursService {
       throw new BadRequestException('Slug inválido');
     }
 
+    // 📌 1. Encontrar el tour
     const tour = await this.tourModel
       .findOne({ slug })
       .populate('vehicleIds')
@@ -104,6 +105,13 @@ export class ToursService {
       throw new NotFoundException(`Tour con slug "${slug}" no encontrado`);
     }
 
+    // 📌 2. Incrementar contador de visitas (reviewsCount)
+    await this.tourModel.updateOne(
+      { _id: tour._id },
+      { $inc: { reviewsCount: 1 } },
+    );
+
+    // 📌 3. Retornar mergeado
     return this.mergeTourWithLang(tour, lang);
   }
 
@@ -373,7 +381,8 @@ export class ToursService {
 
   async findPopularTours(lang?: string): Promise<Tour[]> {
     const tours = await this.tourModel
-      .find({ isPopular: true, isActive: true })
+      .find({ isActive: true })
+      .sort({ reviewsCount: -1 }) // ORDENAR por número de reseñas
       .limit(4)
       .populate('vehicleIds')
       .exec();

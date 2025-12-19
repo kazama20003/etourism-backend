@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -24,6 +25,12 @@ async function bootstrap() {
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+  // 3️⃣ Helmet (Seguridad HTTP)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    }),
+  );
   // Cookies
   app.use(cookieParser());
 

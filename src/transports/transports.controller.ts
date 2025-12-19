@@ -46,6 +46,11 @@ export class TransportsController {
   findOne(@Param('id') id: string, @Query('lang') lang?: Lang) {
     return this.transportsService.findOne(id, lang);
   }
+  // GET BY SLUG
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string, @Query('lang') lang?: Lang) {
+    return this.transportsService.findBySlug(slug, lang);
+  }
 
   // UPDATE
   @Patch(':id')

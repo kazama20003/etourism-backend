@@ -24,7 +24,9 @@ export class Transport {
   // 🌎 Traducciones del título
   @Prop({ type: Object, default: {} })
   titleTranslations?: TranslatedText;
-
+  // SLUG (autogenerado desde title)
+  @Prop({ required: true, unique: true, index: true })
+  slug: string;
   // DESCRIPCIÓN PRINCIPAL (ES)
   @Prop()
   description?: string;
