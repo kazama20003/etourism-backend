@@ -24,6 +24,8 @@ export class PaymentsController {
   // ─────────────────────────────────────
   @Post('ipn')
   async ipn(@Req() req: ExpressRequest) {
+    console.log('>>> req.user =', req.user);
+
     // IZIPAY SIEMPRE ENVÍA RAW BUFFER
     return this.paymentsService.handleIpn(req.body as Buffer);
   }

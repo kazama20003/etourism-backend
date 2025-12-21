@@ -3,24 +3,25 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { UsersService } from 'src/users/users.service';
-import { ValidatedUser } from '../auth.service';
 
 export interface JwtPayload {
   email: string;
   sub: string;
-  roles: string[]; // 👈 añadir esto
+  roles: string[];
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private usersService: UsersService) {
     const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET no está definido');
+    if (!secret) {
+      throw new Error('JWT_SECRET no está definido');
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
-          // 1️⃣ Revisar Authorization Header
+          // 1️⃣ Authorization: Bearer <token>
           if (req?.headers?.authorization) {
             const authHeader = req.headers.authorization;
             if (authHeader.startsWith('Bearer ')) {
@@ -28,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             }
           }
 
-          // 2️⃣ Revisar cookie "token"
+          // 2️⃣ Cookie "token"
           const typedReq = req as Request & {
             cookies?: Record<string, unknown>;
           };
@@ -47,15 +48,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<ValidatedUser> {
-    const user = (await this.usersService.findOneById(
-      payload.sub,
-    )) as ValidatedUser;
+  // ✔️ VALIDACIÓN LIMPIA Y CORRECTA
+  async validate(payload: JwtPayload) {
+    // Verificar existencia del usuario
+    const user = await this.usersService.findOneById(payload.sub);
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Usuario no encontrado o inactivo');
     }
 
-    return user;
+    // ✔️ Retornar SOLO un objeto plano
+    return {
+      _id: payload.sub,
+      email: payload.email,
+      roles: payload.roles,
+    };
   }
 }
