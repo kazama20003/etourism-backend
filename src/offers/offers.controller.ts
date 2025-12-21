@@ -32,7 +32,7 @@ export class OffersController {
     return this.offersService.findOne(id);
   }
   // 🔥 Buscar por código (para validar cupones)
-  @Get('/code/:code')
+  @Get('code/:code')
   findByCode(@Param('code') code: string) {
     return this.offersService.findByCode(code);
   }
