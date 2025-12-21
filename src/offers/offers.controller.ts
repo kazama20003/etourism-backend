@@ -12,7 +12,6 @@ import { OffersService } from './offers.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { UpdateOfferDto } from './dto/update-offer.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-
 @Controller('offers')
 export class OffersController {
   constructor(private readonly offersService: OffersService) {}
@@ -27,14 +26,16 @@ export class OffersController {
     return this.offersService.findAll(paginationDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.offersService.findOne(id);
-  }
-  // 🔥 Buscar por código (para validar cupones)
+  // 🔥 ESTA RUTA DEBE IR ANTES
   @Get('code/:code')
   findByCode(@Param('code') code: string) {
     return this.offersService.findByCode(code);
+  }
+
+  // 🔥 ESTA DEBE IR DESPUÉS
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.offersService.findOne(id);
   }
 
   @Patch(':id')
