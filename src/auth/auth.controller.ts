@@ -26,7 +26,7 @@ import { UpdateUserDto } from '../users/dto/update-user.dto';
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: 'lax',
+  sameSite: 'none',
   path: '/',
   domain: '.tawantinsuyoperu.com',
   maxAge: 1000 * 60 * 60 * 24 * 7,

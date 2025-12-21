@@ -7,6 +7,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+
 import type { Request as ExpressRequest } from 'express';
 
 import { PaymentsService } from './payments.service';
@@ -19,32 +20,31 @@ import { ValidatedUser } from '../auth/auth.service';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  // ─────────────────────────────────────
-  // 🔐 IPN IZIPAY (RAW BODY - SIN JWT)
-  // ─────────────────────────────────────
+  // --------------------------------------------------------------
+  // 🔐 IPN – No usa JWT ni req.user
+  // --------------------------------------------------------------
   @Post('ipn')
   async ipn(@Req() req: ExpressRequest) {
     console.log('>>> req.user =', req.user);
-
-    // IZIPAY SIEMPRE ENVÍA RAW BUFFER
     return this.paymentsService.handleIpn(req.body as Buffer);
   }
 
-  // ─────────────────────────────────────
-  // 💳 CREAR FORM TOKEN (JWT OPCIONAL)
-  // ─────────────────────────────────────
+  // --------------------------------------------------------------
+  // 💳 FORM TOKEN – JWT OPCIONAL
+  // --------------------------------------------------------------
   @UseGuards(OptionalJwtAuthGuard)
   @Post('form-token')
   createFormToken(
     @Body() dto: CreatePaymentDto,
     @Request() req: { user?: ValidatedUser },
   ) {
+    const userId = req.user?._id?.toString();
+
     return this.paymentsService.createFormToken({
       ...dto,
       orderData: {
         ...dto.orderData,
-        // 👇 userId SOLO SI EL USUARIO ESTÁ LOGUEADO
-        userId: req.user?._id?.toString(),
+        ...(userId && { userId }), // solo lo añade si existe
       },
     });
   }
