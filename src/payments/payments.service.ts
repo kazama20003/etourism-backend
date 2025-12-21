@@ -25,13 +25,13 @@ export class PaymentsService {
     private readonly paymentModel: Model<PaymentDocument>,
     private readonly ordersService: OrdersService,
     private readonly mailService: MailService,
-    private readonly cartService: CartService, // ✅ YA ESTÁ INYECTADO
+    private readonly cartService: CartService,
     private readonly http: HttpService,
   ) {}
 
-  // ─────────────────────────────────────
-  // 🔔 IPN HANDLER (IDEMPOTENTE + VACIADO DE CARRITO)
-  // ─────────────────────────────────────
+  // --------------------------------------------------------------------
+  // IPN
+  // --------------------------------------------------------------------
   async handleIpn(rawBody: Buffer) {
     if (!rawBody || !rawBody.length) {
       return { status: 'IGNORED' };
@@ -71,7 +71,7 @@ export class PaymentsService {
       return { status: 'IGNORED' };
     }
 
-    // ✅ Firma válida
+    // Firma válida
     const answer = JSON.parse(krAnswer as string) as IzipayAnswer;
 
     if (answer.orderStatus !== 'PAID') {
@@ -85,6 +85,9 @@ export class PaymentsService {
 
     const payment = await this.paymentModel.findOne({ izipayOrderId });
 
+    // LOG CRÍTICO: ¿contiene userId?
+    this.logger.log('[IPN] Payment.orderDraft found:', payment?.orderDraft);
+
     if (!payment) {
       this.logger.warn(
         `⚠️ Payment not found for izipayOrderId=${izipayOrderId}`,
@@ -92,12 +95,11 @@ export class PaymentsService {
       return { status: 'IGNORED' };
     }
 
-    // 🔁 IDEMPOTENCIA
     if (payment.status === PaymentStatus.PAID) {
       return { status: 'OK' };
     }
 
-    // 1️⃣ CREAR / CONFIRMAR ORDEN
+    // Crear orden final
     const order = await this.ordersService.create(
       {
         ...payment.orderDraft,
@@ -105,10 +107,9 @@ export class PaymentsService {
         paymentStatus: PaymentStatus.PAID,
         paymentMethod: 'IZIPAY',
       },
-      payment.orderDraft?.userId, // 👈 usuario si existe
+      payment.orderDraft?.userId,
     );
 
-    // 2️⃣ ACTUALIZAR PAYMENT
     await this.paymentModel.findByIdAndUpdate(payment._id, {
       status: PaymentStatus.PAID,
       orderId: order._id,
@@ -116,8 +117,6 @@ export class PaymentsService {
       rawResponse: answer,
     });
 
-    // 3️⃣ 🧹 VACIAR CARRITO (PUNTO CLAVE)
-    // 3️⃣ 🧹 VACIAR CARRITO (FUENTE CORRECTA)
     if (payment.orderDraft?.userId) {
       await this.cartService.clearOpenCartByUserId(payment.orderDraft.userId);
     } else if (payment.orderDraft?.sessionId) {
@@ -126,7 +125,6 @@ export class PaymentsService {
       );
     }
 
-    // 4️⃣ LOG
     this.logger.log(
       `✅ Payment confirmado | paymentId=${payment._id.toString()} | orderId=${order._id.toString()}`,
     );
@@ -134,10 +132,13 @@ export class PaymentsService {
     return { status: 'OK' };
   }
 
-  // ─────────────────────────────────────
-  // 💳 FORM TOKEN
-  // ─────────────────────────────────────
+  // --------------------------------------------------------------------
+  // FORM TOKEN
+  // --------------------------------------------------------------------
   async createFormToken(dto: CreatePaymentDto) {
+    // LOG CRÍTICO: ¿llega userId al service?
+    this.logger.log('[PaymentsService] dto.orderData received:', dto.orderData);
+
     const payment = await this.paymentModel.create({
       amount: dto.orderData.grandTotal,
       currency: dto.orderData.currency ?? 'PEN',
@@ -146,6 +147,12 @@ export class PaymentsService {
         ...dto.orderData,
         ...(dto.orderData.userId && { userId: dto.orderData.userId }),
       },
+    });
+
+    // LOG CONFIRMACIÓN: el payment guardado
+    this.logger.log('[PaymentsService] Payment created:', {
+      paymentId: payment._id.toString(),
+      orderDraft: payment.orderDraft,
     });
 
     const izipayOrderId = payment._id.toString();
