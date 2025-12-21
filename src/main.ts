@@ -42,6 +42,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000', // desarrollo local
+      'https://api.tawantinsuyoperu.com', // backend en producción
       'https://tawantinsuyoperu.com', // frontend en producción
       'https://www.tawantinsuyoperu.com', // opcional si usas www
     ],

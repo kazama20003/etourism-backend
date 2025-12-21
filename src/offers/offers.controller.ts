@@ -31,6 +31,11 @@ export class OffersController {
   findOne(@Param('id') id: string) {
     return this.offersService.findOne(id);
   }
+  // 🔥 Buscar por código (para validar cupones)
+  @Get('/code/:code')
+  findByCode(@Param('code') code: string) {
+    return this.offersService.findByCode(code);
+  }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateOfferDto: UpdateOfferDto) {
@@ -40,11 +45,5 @@ export class OffersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.offersService.remove(id);
-  }
-
-  // 🔥 Buscar por código (para validar cupones)
-  @Get('/code/:code')
-  findByCode(@Param('code') code: string) {
-    return this.offersService.findByCode(code);
   }
 }
