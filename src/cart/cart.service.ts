@@ -179,8 +179,8 @@ export class CartService {
     }
 
     const cart = await this.cartModel.findOne({
-      status: 'open',
       userId: new Types.ObjectId(userId),
+      status: { $in: ['open', 'pending', 'active'] },
     });
 
     if (!cart) return { cleared: false };
@@ -190,7 +190,6 @@ export class CartService {
     cart.discountTotal = 0;
     cart.grandTotal = 0;
 
-    // opcional: marca el carrito como convertido para no reutilizarlo
     cart.status = 'converted';
 
     await cart.save();

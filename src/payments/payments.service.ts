@@ -33,9 +33,7 @@ export class PaymentsService {
   // IPN
   // --------------------------------------------------------------------
   async handleIpn(rawBody: Buffer) {
-    if (!rawBody || !rawBody.length) {
-      return { status: 'IGNORED' };
-    }
+    if (!rawBody || !rawBody.length) return { status: 'IGNORED' };
 
     const bodyString = rawBody.toString('utf8');
     const payload = qs.parse(bodyString);
@@ -44,20 +42,18 @@ export class PaymentsService {
     const krHash = payload['kr-hash'];
     const krHashKey = payload['kr-hash-key'];
 
-    if (!krAnswer || !krHash || !krHashKey) {
-      return { status: 'IGNORED' };
-    }
+    if (!krAnswer || !krHash || !krHashKey) return { status: 'IGNORED' };
 
     const hashKey = Array.isArray(krHashKey) ? krHashKey[0] : krHashKey;
 
-    let secret: string;
-    if (hashKey === 'sha256_hmac') {
-      secret = process.env.IZIPAY_HMACSHA256!;
-    } else if (hashKey === 'password') {
-      secret = process.env.IZIPAY_PASSWORD!;
-    } else {
-      return { status: 'IGNORED' };
-    }
+    const secret =
+      hashKey === 'sha256_hmac'
+        ? process.env.IZIPAY_HMACSHA256
+        : hashKey === 'password'
+          ? process.env.IZIPAY_PASSWORD
+          : null;
+
+    if (!secret) return { status: 'IGNORED' };
 
     const computedHash = crypto
       .createHmac('sha256', secret)
@@ -71,35 +67,21 @@ export class PaymentsService {
       return { status: 'IGNORED' };
     }
 
-    // Firma válida
+    // payload válido
     const answer = JSON.parse(krAnswer as string) as IzipayAnswer;
-
-    if (answer.orderStatus !== 'PAID') {
-      return { status: 'IGNORED' };
-    }
+    if (answer.orderStatus !== 'PAID') return { status: 'IGNORED' };
 
     const izipayOrderId = answer.orderDetails?.orderId;
-    if (!izipayOrderId) {
-      return { status: 'IGNORED' };
-    }
+    if (!izipayOrderId) return { status: 'IGNORED' };
 
     const payment = await this.paymentModel.findOne({ izipayOrderId });
-
-    // LOG CRÍTICO: ¿contiene userId?
     this.logger.log('[IPN] Payment.orderDraft found:', payment?.orderDraft);
 
-    if (!payment) {
-      this.logger.warn(
-        `⚠️ Payment not found for izipayOrderId=${izipayOrderId}`,
-      );
-      return { status: 'IGNORED' };
-    }
+    if (!payment) return { status: 'IGNORED' };
 
-    if (payment.status === PaymentStatus.PAID) {
-      return { status: 'OK' };
-    }
+    if (payment.status === PaymentStatus.PAID) return { status: 'OK' };
 
-    // Crear orden final
+    // crear orden final
     const order = await this.ordersService.create(
       {
         ...payment.orderDraft,
@@ -117,6 +99,23 @@ export class PaymentsService {
       rawResponse: answer,
     });
 
+    // enviar correo
+    try {
+      await this.mailService.sendPaymentConfirmation({
+        to: payment.orderDraft.customerEmail,
+        customerName: payment.orderDraft.customerName,
+        orderId: order._id.toString(),
+        confirmationCode: order.confirmationCode ?? order._id.toString(),
+        total: order.grandTotal,
+        currency: order.currency,
+      });
+
+      this.logger.log(`📧 Email enviado a ${payment.orderDraft.customerEmail}`);
+    } catch (err) {
+      this.logger.error('❌ Error enviando email:', err);
+    }
+
+    // limpiar carrito
     if (payment.orderDraft?.userId) {
       await this.cartService.clearOpenCartByUserId(payment.orderDraft.userId);
     } else if (payment.orderDraft?.sessionId) {
