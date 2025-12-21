@@ -55,13 +55,17 @@ export class UsersService {
   /**
    * Obtiene un usuario por ID de Mongoose (Usado en el JwtStrategy).
    */
-  async findOneById(id: string): Promise<User> {
-    // <-- RENOMBRADO de findOne a findOneById
+  /**
+   * Obtiene un usuario por ID de Mongoose (usado en JwtStrategy).
+   */
+  async findOneById(id: string): Promise<UserDocument> {
     const user = await this.userModel.findById(id).exec();
+
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
-    return user;
+
+    return user; // 🔥 ahora es UserDocument real
   }
 
   /**

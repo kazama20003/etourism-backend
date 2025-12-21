@@ -9,15 +9,12 @@ const SALT_ROUNDS = 10;
 
 @Schema({ timestamps: true })
 export class User {
-  // --- Autenticación y Perfil ---
-
   @Prop({ required: true, unique: true, index: true })
   email: string;
 
   @Prop({ select: false })
   passwordHash?: string;
 
-  // Campo virtual (no va a la BD)
   public password!: string;
 
   @Prop({
@@ -37,8 +34,6 @@ export class User {
   @Prop()
   lastName: string;
 
-  // --- Roles y Estado ---
-
   @Prop({
     type: [String],
     enum: UserRole,
@@ -48,8 +43,6 @@ export class User {
 
   @Prop({ default: true })
   isActive: boolean;
-
-  // --- Información opcional ---
 
   @Prop()
   country?: string;
@@ -65,6 +58,10 @@ export class User {
 
   @Prop({ unique: true, sparse: true })
   documentNumber?: string;
+
+  // 🔥🔥🔥 AGREGAR ESTO
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

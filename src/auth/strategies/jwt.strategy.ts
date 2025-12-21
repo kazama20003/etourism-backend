@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
@@ -21,15 +21,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
-          // 1️⃣ Authorization: Bearer <token>
+          // 1) Authorization header
           if (req?.headers?.authorization) {
-            const authHeader = req.headers.authorization;
-            if (authHeader.startsWith('Bearer ')) {
-              return authHeader.split(' ')[1];
+            const header = req.headers.authorization;
+            if (header.startsWith('Bearer ')) {
+              return header.split(' ')[1];
             }
           }
 
-          // 2️⃣ Cookie "token"
+          // 2) Cookie
           const typedReq = req as Request & {
             cookies?: Record<string, unknown>;
           };
@@ -48,20 +48,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // ✔️ VALIDACIÓN LIMPIA Y CORRECTA
   async validate(payload: JwtPayload) {
-    // Verificar existencia del usuario
     const user = await this.usersService.findOneById(payload.sub);
 
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('Usuario no encontrado o inactivo');
-    }
-
-    // ✔️ Retornar SOLO un objeto plano
     return {
-      _id: payload.sub,
-      email: payload.email,
-      roles: payload.roles,
+      _id: user._id.toString(),
+      email: user.email,
+      roles: user.roles,
+      authProvider: user.authProvider ?? 'LOCAL',
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+      createdAt: user.createdAt ?? new Date().toISOString(),
     };
   }
 }
