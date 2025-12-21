@@ -38,6 +38,12 @@ export class PaymentsController {
     @Body() dto: CreatePaymentDto,
     @Request() req: { user?: ValidatedUser },
   ) {
+    // Log seguro y tipado
+    console.log(
+      '[PaymentsController] Authenticated user:',
+      req.user ?? 'Guest',
+    );
+
     const userId = req.user?._id?.toString();
 
     return this.paymentsService.createFormToken({
