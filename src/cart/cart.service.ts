@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, FilterQuery } from 'mongoose';
 import { Cart, CartDocument } from './entities/cart.entity';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
+
 @Injectable()
 export class CartService {
   constructor(
@@ -15,7 +16,9 @@ export class CartService {
     private readonly cartModel: Model<CartDocument>,
   ) {}
 
+  // ============================================
   // POST /cart
+  // ============================================
   async create(dto: CreateCartDto & { userId?: string }): Promise<Cart> {
     const { userId, sessionId, items } = dto;
 
@@ -49,7 +52,9 @@ export class CartService {
     return cart.save();
   }
 
+  // ============================================
   // GET /cart
+  // ============================================
   async findAll(): Promise<Cart[]> {
     return this.cartModel
       .find()
@@ -61,31 +66,45 @@ export class CartService {
       .exec();
   }
 
-  // ✅ GET /cart/current
+  // ============================================
+  // GET /cart/current
+  // ============================================
   async findCurrent(params: {
     userId?: string;
     sessionId?: string;
   }): Promise<Cart | null> {
     const { userId, sessionId } = params;
 
-    if (!userId && !sessionId) {
-      throw new BadRequestException('userId or sessionId is required');
+    if (userId) {
+      return this.cartModel
+        .findOne({
+          status: 'open',
+          userId: new Types.ObjectId(userId),
+        })
+        .populate({
+          path: 'items.productId',
+          select: 'title slug currentPrice images',
+        });
     }
 
-    return this.cartModel
-      .findOne({
-        status: 'open',
-        ...(userId && { userId: new Types.ObjectId(userId) }),
-        ...(sessionId && { sessionId }),
-      })
-      .populate({
-        path: 'items.productId',
-        select: 'title slug currentPrice images',
-      })
-      .exec();
+    if (sessionId) {
+      return this.cartModel
+        .findOne({
+          status: 'open',
+          sessionId,
+        })
+        .populate({
+          path: 'items.productId',
+          select: 'title slug currentPrice images',
+        });
+    }
+
+    throw new BadRequestException('userId or sessionId is required');
   }
 
+  // ============================================
   // GET /cart/:id
+  // ============================================
   async findOne(id: string): Promise<Cart> {
     const cart = await this.cartModel
       .findById(id)
@@ -94,11 +113,14 @@ export class CartService {
         select: 'title slug currentPrice images',
       })
       .exec();
+
     if (!cart) throw new NotFoundException('Cart not found');
     return cart;
   }
 
+  // ============================================
   // PATCH /cart/:id
+  // ============================================
   async update(id: string, dto: UpdateCartDto): Promise<Cart> {
     const cart = await this.cartModel.findById(id);
     if (!cart) throw new NotFoundException('Cart not found');
@@ -129,25 +151,37 @@ export class CartService {
     return cart.save();
   }
 
+  // ============================================
   // DELETE /cart/:id
+  // ============================================
   async remove(id: string) {
     const cart = await this.cartModel.findByIdAndDelete(id);
     if (!cart) throw new NotFoundException('Cart not found');
     return { deleted: true };
   }
 
-  // ============================
+  // ============================================
   // Helpers
-  // ============================
+  // ============================================
   private async getOrCreateOpenCart(
     userId?: string,
     sessionId?: string,
   ): Promise<CartDocument> {
-    let cart = await this.cartModel.findOne({
-      status: 'open',
-      ...(userId && { userId: new Types.ObjectId(userId) }),
-      ...(sessionId && { sessionId }),
-    });
+    let query: FilterQuery<CartDocument>;
+
+    if (userId) {
+      query = {
+        status: 'open',
+        userId: new Types.ObjectId(userId),
+      };
+    } else {
+      query = {
+        status: 'open',
+        sessionId,
+      };
+    }
+
+    let cart = await this.cartModel.findOne(query);
 
     if (!cart) {
       cart = await this.cartModel.create({
@@ -165,14 +199,13 @@ export class CartService {
 
   private recalculateTotals(cart: CartDocument) {
     cart.subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
-
     cart.discountTotal = 0;
     cart.grandTotal = cart.subtotal;
   }
-  // ============================
-  // ✅ Vaciar carrito (para IPN)
-  // ============================
 
+  // ============================================
+  // Vaciar carrito (para IPN)
+  // ============================================
   async clearOpenCartByUserId(userId: string): Promise<{ cleared: boolean }> {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('Invalid userId');
@@ -189,7 +222,6 @@ export class CartService {
     cart.subtotal = 0;
     cart.discountTotal = 0;
     cart.grandTotal = 0;
-
     cart.status = 'converted';
 
     await cart.save();
@@ -214,8 +246,6 @@ export class CartService {
     cart.subtotal = 0;
     cart.discountTotal = 0;
     cart.grandTotal = 0;
-
-    // opcional: marca el carrito como convertido para no reutilizarlo
     cart.status = 'converted';
 
     await cart.save();

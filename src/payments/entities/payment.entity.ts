@@ -19,7 +19,6 @@ export class Payment {
   })
   status: PaymentStatus;
 
-  // snapshot
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
   orderDraft: PaymentOrderDraft;
 
@@ -31,16 +30,23 @@ export class Payment {
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   rawResponse?: Record<string, any>;
+
   @Prop({ index: true })
   izipayOrderId: string;
 
   @Prop()
   formToken: string;
+
+  // ✔️ NECESARIOS PARA LIMPIAR CARRITO
+  @Prop({ type: String, required: false })
+  sessionId?: string | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: false })
+  userId?: Types.ObjectId | null;
 }
 
 export type PaymentDocument = Payment & Document;
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
-// Índices útiles
 PaymentSchema.index({ status: 1, createdAt: -1 });
 PaymentSchema.index({ orderId: 1 });

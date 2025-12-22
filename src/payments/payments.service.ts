@@ -30,7 +30,7 @@ export class PaymentsService {
   ) {}
 
   // --------------------------------------------------------------------
-  // IPN
+  // IPN - NOTIFICACIÓN ASÍNCRONA DE PAGO
   // --------------------------------------------------------------------
   async handleIpn(rawBody: Buffer) {
     if (!rawBody || !rawBody.length) return { status: 'IGNORED' };
@@ -78,7 +78,6 @@ export class PaymentsService {
     this.logger.log('[IPN] Payment.orderDraft found:', payment?.orderDraft);
 
     if (!payment) return { status: 'IGNORED' };
-
     if (payment.status === PaymentStatus.PAID) return { status: 'OK' };
 
     // crear orden final
@@ -111,17 +110,19 @@ export class PaymentsService {
       });
 
       this.logger.log(`📧 Email enviado a ${payment.orderDraft.customerEmail}`);
-    } catch (err) {
-      this.logger.error('❌ Error enviando email:', err);
+    } catch (err: unknown) {
+      this.logger.error(
+        '❌ Error enviando email:',
+        err instanceof Error ? err.message : err,
+      );
     }
 
     // limpiar carrito
-    if (payment.orderDraft?.userId) {
-      await this.cartService.clearOpenCartByUserId(payment.orderDraft.userId);
-    } else if (payment.orderDraft?.sessionId) {
-      await this.cartService.clearOpenCartBySessionId(
-        payment.orderDraft.sessionId,
-      );
+    // limpiar carrito
+    if (payment.userId) {
+      await this.cartService.clearOpenCartByUserId(payment.userId.toString());
+    } else if (payment.sessionId) {
+      await this.cartService.clearOpenCartBySessionId(payment.sessionId);
     }
 
     this.logger.log(
@@ -132,23 +133,26 @@ export class PaymentsService {
   }
 
   // --------------------------------------------------------------------
-  // FORM TOKEN
+  // CREAR FORM TOKEN (iniciar pago)
   // --------------------------------------------------------------------
   async createFormToken(dto: CreatePaymentDto) {
-    // LOG CRÍTICO: ¿llega userId al service?
     this.logger.log('[PaymentsService] dto.orderData received:', dto.orderData);
 
     const payment = await this.paymentModel.create({
       amount: dto.orderData.grandTotal,
       currency: dto.orderData.currency ?? 'PEN',
       status: PaymentStatus.PENDING,
+
+      // Guardar SIEMPRE userId y sessionId
       orderDraft: {
         ...dto.orderData,
-        ...(dto.orderData.userId && { userId: dto.orderData.userId }),
       },
+
+      // Guardar userId y sessionId correctamente en el Payment
+      userId: dto.userId ?? null,
+      sessionId: dto.sessionId ?? null,
     });
 
-    // LOG CONFIRMACIÓN: el payment guardado
     this.logger.log('[PaymentsService] Payment created:', {
       paymentId: payment._id.toString(),
       orderDraft: payment.orderDraft,
