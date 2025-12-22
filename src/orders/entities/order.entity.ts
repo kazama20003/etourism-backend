@@ -32,12 +32,16 @@ export class Order {
 
   @Prop()
   customerPhone?: string;
-
   // 🛒 ITEMS DEL PEDIDO (COPIA EXACTA DE Cart.items)
   @Prop({
     type: [
       {
-        productId: { type: Types.ObjectId, required: true },
+        productId: {
+          type: Types.ObjectId,
+          required: true,
+          refPath: 'items.productType', // <- AGREGADO
+        },
+
         productType: {
           type: String,
           required: true,
