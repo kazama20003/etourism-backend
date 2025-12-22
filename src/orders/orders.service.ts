@@ -142,6 +142,7 @@ export class OrdersService {
         .limit(limitNumber)
         .populate('userId')
         .populate('items.appliedOfferId')
+        .populate('items.productId') // ← TOUR O TRANSPORT
         .exec(),
 
       this.orderModel.countDocuments({ userId: userObjectId }),
