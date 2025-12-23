@@ -194,7 +194,7 @@ export class MailService {
               </p>
 
               <p style="text-align:center;margin:28px 0;">
-                <a href="https://incatravelperu.com/reservas/${params.confirmationCode}"
+                <a href="https://incatravelperu.com/users/profile"
                    style="background:#0d9488;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:6px;font-size:14px;display:inline-block;">
                   Ver mi reserva
                 </a>
