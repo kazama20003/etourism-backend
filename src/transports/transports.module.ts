@@ -11,5 +11,6 @@ import { Transport, TransportSchema } from './entities/transport.entity';
   ],
   controllers: [TransportsController],
   providers: [TransportsService],
+  exports: [MongooseModule],
 })
 export class TransportsModule {}

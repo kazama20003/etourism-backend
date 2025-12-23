@@ -10,12 +10,21 @@ import { Order, OrderDocument } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-
+import { Tour, TourDocument } from '../tours/entities/tour.entity';
+import {
+  Transport,
+  TransportDocument,
+} from '../transports/entities/transport.entity';
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
+    @InjectModel(Tour.name)
+    private readonly tourModel: Model<TourDocument>,
+
+    @InjectModel(Transport.name)
+    private readonly transportModel: Model<TransportDocument>,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId?: string) {
@@ -154,5 +163,20 @@ export class OrdersService {
       total,
       data: orders,
     };
+  }
+  // -------------------------------------------------------------
+  // OBTENER TOUR POR ID
+  // -------------------------------------------------------------
+  async getTourById(id: string) {
+    if (!Types.ObjectId.isValid(id)) return null;
+    return this.tourModel.findById(id).lean().exec();
+  }
+
+  // -------------------------------------------------------------
+  // OBTENER TRANSPORT POR ID
+  // -------------------------------------------------------------
+  async getTransportById(id: string) {
+    if (!Types.ObjectId.isValid(id)) return null;
+    return this.transportModel.findById(id).lean().exec();
   }
 }

@@ -45,7 +45,6 @@ export class PaymentsService {
     if (!krAnswer || !krHash || !krHashKey) return { status: 'IGNORED' };
 
     const hashKey = Array.isArray(krHashKey) ? krHashKey[0] : krHashKey;
-
     const secret =
       hashKey === 'sha256_hmac'
         ? process.env.IZIPAY_HMACSHA256
@@ -74,12 +73,11 @@ export class PaymentsService {
     if (!izipayOrderId) return { status: 'IGNORED' };
 
     const payment = await this.paymentModel.findOne({ izipayOrderId });
-    this.logger.log('[IPN] Payment.orderDraft found:', payment?.orderDraft);
 
     if (!payment) return { status: 'IGNORED' };
     if (payment.status === PaymentStatus.PAID) return { status: 'OK' };
 
-    // crear orden final
+    // Crear orden final desde orderDraft
     const order = await this.ordersService.create(
       {
         ...payment.orderDraft,
@@ -98,7 +96,48 @@ export class PaymentsService {
     });
 
     // --------------------------------------------------------------------
-    // ENVÍO DE EMAIL SEGÚN TIPO DE USUARIO
+    // Construcción segura de items
+    // --------------------------------------------------------------------
+    const items = await Promise.all(
+      order.items.map(async (i) => {
+        let productName = 'Producto';
+        let quantity = 1;
+
+        // NOMBRE REAL DEL PRODUCTO SEGÚN TIPO
+        if (i.productType === 'Tour') {
+          const tour = await this.ordersService.getTourById(
+            i.productId.toString(),
+          );
+
+          productName = tour?.title ?? 'Tour';
+        }
+
+        if (i.productType === 'Transport') {
+          const transport = await this.ordersService.getTransportById(
+            i.productId.toString(),
+          );
+
+          productName = transport?.title ?? 'Transporte';
+        }
+
+        // CANTIDAD REAL
+        quantity = (i.adults ?? 0) + (i.children ?? 0) + (i.infants ?? 0);
+        if (quantity === 0) quantity = 1;
+
+        return {
+          name: productName,
+          quantity,
+          date: i.travelDate
+            ? new Date(i.travelDate).toISOString().slice(0, 10)
+            : '',
+          unitPrice: i.unitPrice ?? i.totalPrice / quantity,
+          totalPrice: i.totalPrice ?? (i.unitPrice ?? 0) * quantity,
+        };
+      }),
+    );
+
+    // --------------------------------------------------------------------
+    // ENVÍO DE EMAIL
     // --------------------------------------------------------------------
     try {
       if (payment.userId) {
@@ -110,6 +149,7 @@ export class PaymentsService {
           confirmationCode: order.confirmationCode ?? order._id.toString(),
           total: order.grandTotal,
           currency: order.currency,
+          items,
         });
 
         this.logger.log(
@@ -124,20 +164,18 @@ export class PaymentsService {
           confirmationCode: order.confirmationCode ?? order._id.toString(),
           total: order.grandTotal,
           currency: order.currency,
+          items,
         });
 
         this.logger.log(
           `📧 Email enviado (GUEST USER) → ${payment.orderDraft.customerEmail}`,
         );
       }
-    } catch (err: unknown) {
-      this.logger.error(
-        '❌ Error enviando email:',
-        err instanceof Error ? err.message : err,
-      );
+    } catch (err) {
+      this.logger.error('❌ Error enviando email:', err);
     }
 
-    // limpiar carrito
+    // LIMPIAR CARRITO
     if (payment.userId) {
       await this.cartService.clearOpenCartByUserId(payment.userId.toString());
     } else if (payment.sessionId) {
@@ -152,7 +190,7 @@ export class PaymentsService {
   }
 
   // --------------------------------------------------------------------
-  // CREAR FORM TOKEN (iniciar pago)
+  // CREAR FORM TOKEN
   // --------------------------------------------------------------------
   async createFormToken(dto: CreatePaymentDto) {
     this.logger.log('[PaymentsService] dto.orderData received:', dto.orderData);
@@ -161,20 +199,9 @@ export class PaymentsService {
       amount: dto.orderData.grandTotal,
       currency: dto.orderData.currency ?? 'PEN',
       status: PaymentStatus.PENDING,
-
-      // Guardar todos los datos del pedido
-      orderDraft: {
-        ...dto.orderData,
-      },
-
-      // userId y sessionId (uno u otro)
+      orderDraft: { ...dto.orderData },
       userId: dto.userId ?? null,
       sessionId: dto.sessionId ?? null,
-    });
-
-    this.logger.log('[PaymentsService] Payment created:', {
-      paymentId: payment._id.toString(),
-      orderDraft: payment.orderDraft,
     });
 
     const izipayOrderId = payment._id.toString();
@@ -195,10 +222,7 @@ export class PaymentsService {
           customer: { email: dto.orderData.customerEmail },
         },
         {
-          headers: {
-            Authorization: auth,
-            'Content-Type': 'application/json',
-          },
+          headers: { Authorization: auth, 'Content-Type': 'application/json' },
         },
       ),
     );

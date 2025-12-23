@@ -8,6 +8,14 @@ interface PaymentConfirmationParams {
   confirmationCode: string;
   total: number;
   currency: string;
+
+  items: {
+    name: string;
+    quantity: number;
+    date: string; // fecha de uso/hora/tour
+    unitPrice: number;
+    totalPrice: number;
+  }[];
 }
 
 @Injectable()
