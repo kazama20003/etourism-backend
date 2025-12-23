@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, isValidObjectId } from 'mongoose';
+import { SUPPORTED_LANGS } from '../common/constants/languages';
 
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -95,9 +96,24 @@ export class ToursService {
       throw new BadRequestException('Slug inválido');
     }
 
-    // 📌 1. Encontrar el tour
+    const safeLang =
+      lang && SUPPORTED_LANGS.includes(lang as Lang) ? (lang as Lang) : 'es';
+
+    // ----------------------------------------------
+    // 1. Buscar por slug del idioma base O traducción
+    // ----------------------------------------------
+    const query =
+      safeLang === 'es'
+        ? { slug }
+        : {
+            $or: [
+              { slug }, // por si coincide con ES
+              { translations: { $elemMatch: { lang: safeLang, slug } } },
+            ],
+          };
+
     const tour = await this.tourModel
-      .findOne({ slug })
+      .findOne(query)
       .populate('vehicleIds')
       .exec();
 
@@ -105,14 +121,18 @@ export class ToursService {
       throw new NotFoundException(`Tour con slug "${slug}" no encontrado`);
     }
 
-    // 📌 2. Incrementar contador de visitas (reviewsCount)
+    // ----------------------------------------------
+    // 2. Incrementar contador de visitas (reviewsCount)
+    // ----------------------------------------------
     await this.tourModel.updateOne(
       { _id: tour._id },
       { $inc: { reviewsCount: 1 } },
     );
 
-    // 📌 3. Retornar mergeado
-    return this.mergeTourWithLang(tour, lang);
+    // ----------------------------------------------
+    // 3. Retornar mergeado con traducción
+    // ----------------------------------------------
+    return this.mergeTourWithLang(tour.toObject(), safeLang);
   }
 
   // 🔎 Obtener un tour por ID (opcional: con lang ya mergeado)
