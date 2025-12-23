@@ -100,15 +100,18 @@ export class ToursService {
       lang && SUPPORTED_LANGS.includes(lang as Lang) ? (lang as Lang) : 'es';
 
     // ----------------------------------------------
-    // 1. Buscar por slug del idioma base O traducción
+    // 1. Buscar por slug base o traducción
     // ----------------------------------------------
     const query =
       safeLang === 'es'
         ? { slug }
         : {
             $or: [
-              { slug }, // por si coincide con ES
-              { translations: { $elemMatch: { lang: safeLang, slug } } },
+              { slug },
+              {
+                'translations.lang': safeLang,
+                'translations.slug': slug,
+              },
             ],
           };
 
@@ -122,7 +125,7 @@ export class ToursService {
     }
 
     // ----------------------------------------------
-    // 2. Incrementar contador de visitas (reviewsCount)
+    // 2. Incrementar visitas
     // ----------------------------------------------
     await this.tourModel.updateOne(
       { _id: tour._id },
@@ -130,7 +133,7 @@ export class ToursService {
     );
 
     // ----------------------------------------------
-    // 3. Retornar mergeado con traducción
+    // 3. Merge con traducción
     // ----------------------------------------------
     return this.mergeTourWithLang(tour.toObject(), safeLang);
   }
