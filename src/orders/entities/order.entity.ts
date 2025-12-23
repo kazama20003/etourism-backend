@@ -118,6 +118,8 @@ export class Order {
   // 📌 Relación al carrito original (opcional)
   @Prop({ type: Types.ObjectId, ref: 'Cart' })
   cartId?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

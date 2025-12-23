@@ -14,5 +14,6 @@ import { HttpModule } from '@nestjs/axios';
   ],
   controllers: [ToursController],
   providers: [ToursService, GoogleTranslationService],
+  exports: [ToursService],
 })
 export class ToursModule {}

@@ -17,6 +17,7 @@ import { TransportsModule } from './transports/transports.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { APP_GUARD } from '@nestjs/core';
     UploadsModule,
     TransportsModule,
     PaymentsModule,
+    DashboardModule,
   ],
 
   controllers: [AppController],

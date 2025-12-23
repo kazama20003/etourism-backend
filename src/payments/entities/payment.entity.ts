@@ -43,6 +43,9 @@ export class Payment {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: false })
   userId?: Types.ObjectId | null;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type PaymentDocument = Payment & Document;
