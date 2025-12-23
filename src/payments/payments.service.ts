@@ -67,7 +67,6 @@ export class PaymentsService {
       return { status: 'IGNORED' };
     }
 
-    // payload válido
     const answer = JSON.parse(krAnswer as string) as IzipayAnswer;
     if (answer.orderStatus !== 'PAID') return { status: 'IGNORED' };
 
@@ -98,18 +97,39 @@ export class PaymentsService {
       rawResponse: answer,
     });
 
-    // enviar correo
+    // --------------------------------------------------------------------
+    // ENVÍO DE EMAIL SEGÚN TIPO DE USUARIO
+    // --------------------------------------------------------------------
     try {
-      await this.mailService.sendPaymentConfirmation({
-        to: payment.orderDraft.customerEmail,
-        customerName: payment.orderDraft.customerName,
-        orderId: order._id.toString(),
-        confirmationCode: order.confirmationCode ?? order._id.toString(),
-        total: order.grandTotal,
-        currency: order.currency,
-      });
+      if (payment.userId) {
+        // Usuario logueado
+        await this.mailService.sendPaymentConfirmation({
+          to: payment.orderDraft.customerEmail,
+          customerName: payment.orderDraft.customerName,
+          orderId: order._id.toString(),
+          confirmationCode: order.confirmationCode ?? order._id.toString(),
+          total: order.grandTotal,
+          currency: order.currency,
+        });
 
-      this.logger.log(`📧 Email enviado a ${payment.orderDraft.customerEmail}`);
+        this.logger.log(
+          `📧 Email enviado (LOGGED USER) → ${payment.orderDraft.customerEmail}`,
+        );
+      } else {
+        // Usuario invitado
+        await this.mailService.sendGuestPaymentConfirmation({
+          to: payment.orderDraft.customerEmail,
+          customerName: payment.orderDraft.customerName,
+          orderId: order._id.toString(),
+          confirmationCode: order.confirmationCode ?? order._id.toString(),
+          total: order.grandTotal,
+          currency: order.currency,
+        });
+
+        this.logger.log(
+          `📧 Email enviado (GUEST USER) → ${payment.orderDraft.customerEmail}`,
+        );
+      }
     } catch (err: unknown) {
       this.logger.error(
         '❌ Error enviando email:',
@@ -117,7 +137,6 @@ export class PaymentsService {
       );
     }
 
-    // limpiar carrito
     // limpiar carrito
     if (payment.userId) {
       await this.cartService.clearOpenCartByUserId(payment.userId.toString());
@@ -143,12 +162,12 @@ export class PaymentsService {
       currency: dto.orderData.currency ?? 'PEN',
       status: PaymentStatus.PENDING,
 
-      // Guardar SIEMPRE userId y sessionId
+      // Guardar todos los datos del pedido
       orderDraft: {
         ...dto.orderData,
       },
 
-      // Guardar userId y sessionId correctamente en el Payment
+      // userId y sessionId (uno u otro)
       userId: dto.userId ?? null,
       sessionId: dto.sessionId ?? null,
     });
